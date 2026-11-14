@@ -1,0 +1,7 @@
+{
+  "name": "Flynnnstore Game Top-up",
+  "description": "High-fidelity futuristic space-themed game top-up application with local database persistence and Gemini AI briefing.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
