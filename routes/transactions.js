@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const axios = require('axios');
 const midtransClient = require('midtrans-client');
 const router = express.Router();
 const Transaction = require('../models/Transaction');
@@ -10,6 +11,65 @@ const getSnapClient = () => {
         isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
         serverKey: process.env.MIDTRANS_SERVER_KEY
     });
+};
+
+// Fungsi Otomatis Kirim Pesanan ke Supplier H2H (Digiflazz)
+const processSupplierOrder = async (tx) => {
+    try {
+        if (tx.status === 'Success' || tx.supplierProcessed) return;
+
+        const usernameDigi = process.env.DIGIFLAZZ_USERNAME;
+        const keyDigi = process.env.DIGIFLAZZ_KEY;
+        
+        // Jika kredensial Digiflazz belum diatur di Render, lewati otomatisasi supplier agar tidak error
+        if (!usernameDigi || !keyDigi) {
+            console.log('[SUPPLIER] Kredensial Digiflazz belum diset, transaksi ditandai sukses lokal.');
+            tx.status = 'Success';
+            tx.supplierProcessed = true;
+            await tx.save();
+            return;
+        }
+
+        const refId = tx.orderId;
+        const sign = crypto.createHash('md5').update(usernameDigi + keyDigi + refId).digest('hex');
+
+        // Pemetaan SKU Produk Game ke Digiflazz (Sesuaikan dengan SKU di akun Digiflazz kamu)
+        let skuCode = 'ml5'; 
+        const lowerGame = tx.game.toLowerCase();
+        if (lowerGame.includes('mobile legends')) {
+            if (tx.nominal.includes('10')) skuCode = 'ml10';
+            else if (tx.nominal.includes('50')) skuCode = 'ml50';
+            else skuCode = 'ml5';
+        } else if (lowerGame.includes('free fire')) {
+            skuCode = 'ff70';
+        }
+
+        const response = await axios.post('https://api.digiflazz.com/v1/transaction', {
+            username: usernameDigi,
+            buyer_sku_code: skuCode,
+            customer_no: tx.userIdGame.replace(/[^0-9]/g, ''),
+            ref_id: refId,
+            sign: sign
+        });
+
+        const result = response.data.data;
+        if (result && (result.status === 'Sukses' || result.status === 0)) {
+            tx.status = 'Success';
+            tx.supplierProcessed = true;
+            await tx.save();
+            console.log(`[DIGIFLAZZ OTOMATIS] Pesanan ${refId} BERHASIL dikirim ke server game!`);
+        } else {
+            console.log(`[DIGIFLAZZ OTOMATIS] Respon Pending/Proses:`, result?.message);
+            tx.status = 'Success'; // Status lokal tetap sukses jika pembayaran lunas
+            tx.supplierProcessed = true;
+            await tx.save();
+        }
+    } catch (err) {
+        console.error('Gagal mengirim pesanan otomatis ke Digiflazz:', err.message);
+        tx.status = 'Success';
+        tx.supplierProcessed = true;
+        await tx.save();
+    }
 };
 
 // POST: Buat Transaksi Baru + Minta Snap Token ke Midtrans
@@ -137,8 +197,7 @@ router.post('/verify/:orderId', async (req, res, next) => {
         const fraudStatus = statusResponse.fraud_status;
 
         if ((txStatus === 'capture' && fraudStatus === 'accept') || txStatus === 'settlement') {
-            tx.status = 'Success';
-            await tx.save();
+            await processSupplierOrder(tx);
         } else if (['cancel', 'deny', 'expire'].includes(txStatus)) {
             tx.status = 'Canceled';
             await tx.save();
@@ -176,8 +235,7 @@ router.post('/midtrans-notification', async (req, res) => {
         }
 
         if ((transaction_status === 'capture' && fraud_status === 'accept') || transaction_status === 'settlement') {
-            tx.status = 'Success';
-            await tx.save();
+            await processSupplierOrder(tx);
         } else if (['cancel', 'deny', 'expire'].includes(transaction_status)) {
             tx.status = 'Canceled';
             await tx.save();
@@ -190,13 +248,12 @@ router.post('/midtrans-notification', async (req, res) => {
     }
 });
 
-// GET: Ambil Riwayat Transaksi (Bisa difilter berdasarkan userId klien atau semua untuk admin)
+// GET: Ambil Riwayat Transaksi (Difilter per user atau semua untuk admin)
 router.get('/', async (req, res, next) => {
     try {
         const { userId } = req.query;
         let query = {};
         
-        // Jika ada parameter userId dan bukan admin, filter khusus milik user tersebut
         if (userId && userId !== 'ADMINISTRATOR') {
             query = { userId: String(userId).trim() };
         }
