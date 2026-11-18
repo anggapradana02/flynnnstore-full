@@ -12,14 +12,19 @@ const app = express();
 // --- KEAMANAN WEB & CORS (Materi Minggu 9) ---
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: [
+    'https://flynnnstore.web.app',
+    'https://flynnnstore.firebaseapp.com',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
 
-// --- DOKUMENTASI API SWAGGER / OPENAPI ) ---
+// --- DOKUMENTASI API SWAGGER / OPENAPI ---
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
@@ -30,8 +35,8 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: 'http://localhost:5000',
-        description: 'Development Server Backend',
+        url: 'https://flynnnstore-full.onrender.com',
+        description: 'Production Server Backend',
       },
     ],
   },
