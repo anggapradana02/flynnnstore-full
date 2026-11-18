@@ -88,39 +88,32 @@ const App: React.FC = () => {
   const [pending, setPending] = useState<any>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  // Banner Promo State
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
 
-  // Form Inputs
   const [userIdGame, setUserIdGame] = useState('');
   const [zoneId, setZoneId] = useState('');
   const [verifiedNickname, setVerifiedNickname] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [whatsapp, setWhatsapp] = useState('');
   
-  // Voucher & Filter
   const [promoCode, setPromoCode] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
   const [promoSuccess, setPromoSuccess] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Top Up Saldo State
   const [topupAmountInput, setTopupAmountInput] = useState('');
 
-  // Authentication State
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authInputName, setAuthInputName] = useState('');
   const [authInputPassword, setAuthInputPassword] = useState('');
   const [authInputPhone, setAuthInputPhone] = useState('');
   const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   
-  // State OTP WhatsApp
   const [isOtpStep, setIsOtpStep] = useState(false);
   const [serverOtp, setServerOtp] = useState('');
   const [inputOtp, setInputOtp] = useState('');
 
-  // State Login Admin & Transaksi Database Terpusat
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
   const [adminUsernameInput, setAdminUsernameInput] = useState('');
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
@@ -139,6 +132,10 @@ const App: React.FC = () => {
     return () => clearInterval(bannerTimer);
   }, []);
 
+  const saveActiveSession = (userData: any) => {
+    localStorage.setItem('flynnn_active_session', JSON.stringify(userData));
+  };
+
   const creditBalanceSafely = async (orderId: string, amountToAdd: number) => {
     const creditedOrders = JSON.parse(localStorage.getItem('flynnn_credited_orders') || '[]');
     if (creditedOrders.includes(orderId)) return;
@@ -146,7 +143,7 @@ const App: React.FC = () => {
     creditedOrders.push(orderId);
     localStorage.setItem('flynnn_credited_orders', JSON.stringify(creditedOrders));
 
-    const currentProfile = await db.getUserProfile();
+    const currentProfile = user.username ? user : await db.getUserProfile();
     if (!currentProfile || currentProfile.role === 'GUEST') return;
 
     const registeredUsers = JSON.parse(localStorage.getItem('flynnn_registered_users') || '{}');
@@ -157,6 +154,7 @@ const App: React.FC = () => {
     await db.updateUserProfile(updatedUser);
     setUser(updatedUser);
     setBalance(newBal);
+    saveActiveSession(updatedUser);
 
     if (registeredUsers[currentProfile.username]) {
       registeredUsers[currentProfile.username].balance = newBal;
@@ -182,28 +180,52 @@ const App: React.FC = () => {
           await creditBalanceSafely(returnedOrderId, Number(verifyData.data.harga));
         }
 
-        await fetchDatabaseTransactions();
-        setScreen('HISTORY');
+        // Ambil sesi user yang aktif dari localStorage agar tidak terlempar ke login
+        const activeSession = JSON.parse(localStorage.getItem('flynnn_active_session') || '{}');
+        if (activeSession.username) {
+          setUser(activeSession);
+          setBalance(activeSession.balance || 0);
+        }
+
+        await fetchDatabaseTransactions(activeSession.username, activeSession.role);
+        setScreen('DASHBOARD');
 
         if (verifyData.data.status === 'Success') {
-          alert('Pembayaran Midtrans Berhasil! Transaksi kamu telah lunas dan diproses.');
+          alert('Pembayaran Midtrans Berhasil! Saldo/Pesanan kamu telah diproses.');
         } else {
-          alert('Transaksi tercatat. Kamu dapat mengecek atau melanjutkan pembayaran di Riwayat Transaksi.');
+          alert('Transaksi tercatat. Cek riwayat transaksi untuk info status.');
         }
       }
     } catch (err) {
-      console.error('Gagal memverifikasi hasil redirect Midtrans:', err);
-      await fetchDatabaseTransactions();
-      setScreen('HISTORY');
+      console.error('Gagal memverifikasi redirect Midtrans:', err);
+      const activeSession = JSON.parse(localStorage.getItem('flynnn_active_session') || '{}');
+      if (activeSession.username) {
+        setUser(activeSession);
+        setBalance(activeSession.balance || 0);
+        await fetchDatabaseTransactions(activeSession.username, activeSession.role);
+        setScreen('DASHBOARD');
+      }
     }
   };
 
   const loadData = async () => {
+    // Cek sesi aktif di localStorage terlebih dahulu
+    const activeSession = JSON.parse(localStorage.getItem('flynnn_active_session') || '{}');
+    if (activeSession.username) {
+      setUser(activeSession);
+      setBalance(activeSession.balance || 0);
+      setDbSynced(true);
+      await fetchDatabaseTransactions(activeSession.username, activeSession.role);
+      setScreen('DASHBOARD');
+      return;
+    }
+
     const p = await db.getUserProfile();
     if (!p || p.role === 'GUEST') {
       const guestProfile = { username: 'GUEST COMMANDER', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Guest', status: 'Guest User', level: 1, balance: 0, role: 'GUEST' };
       setUser(guestProfile);
       setBalance(0);
+      saveActiveSession(guestProfile);
     } else {
       const registeredUsers = JSON.parse(localStorage.getItem('flynnn_registered_users') || '{}');
       if (registeredUsers[p.username]) {
@@ -211,14 +233,23 @@ const App: React.FC = () => {
       }
       setUser(p);
       setBalance(p.balance || 0);
+      saveActiveSession(p);
     }
     setDbSynced(true);
-    await fetchDatabaseTransactions();
+    await fetchDatabaseTransactions(user.username, user.role);
   };
 
-  const fetchDatabaseTransactions = async () => {
+  const fetchDatabaseTransactions = async (currentUsername?: string, currentRole?: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/transactions`);
+      const uname = currentUsername || user.username;
+      const urole = currentRole || user.role;
+
+      // Jika admin, ambil semua transaksi. Jika user biasa, ambil hanya miliknya via query userId
+      const url = (urole === 'ADMIN') 
+        ? `${API_BASE}/api/transactions` 
+        : `${API_BASE}/api/transactions?userId=${encodeURIComponent(uname || '')}`;
+
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setAllDbTransactions(data);
@@ -337,7 +368,6 @@ const App: React.FC = () => {
 
     const finalPrice = pending.type === 'GAME' ? Math.max(0, pending.price - discountAmount) : pending.price;
 
-    // 1. Pembayaran menggunakan Saldo Galaksi (Dompet Akun)
     if (method === 'WALLET' && pending.type === 'GAME') {
       if (balance < finalPrice) {
         alert(`Saldo tidak cukup! Saldo kamu Rp ${balance?.toLocaleString() ?? 0}. Silakan isi saldo terlebih dahulu.`);
@@ -366,6 +396,7 @@ const App: React.FC = () => {
         await db.updateUserProfile(updatedUser);
         setUser(updatedUser);
         setBalance(newBal);
+        saveActiveSession(updatedUser);
 
         const registeredUsers = JSON.parse(localStorage.getItem('flynnn_registered_users') || '{}');
         if (registeredUsers[user.username]) {
@@ -380,7 +411,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // 2. Pembayaran via Midtrans Snap (QRIS, GoPay, VA BCA, VA Mandiri, Retail)
     setIsProcessingPayment(true);
     try {
       const res = await fetch(`${API_BASE}/api/transactions`, {
@@ -420,7 +450,7 @@ const App: React.FC = () => {
   };
 
   const resetAndGoToHistory = async () => {
-    await fetchDatabaseTransactions();
+    await fetchDatabaseTransactions(user.username, user.role);
     setPending(null);
     setUserIdGame('');
     setZoneId('');
@@ -435,7 +465,7 @@ const App: React.FC = () => {
   const handleDeleteAdminTx = async (id: string) => {
     if (!confirm('Yakin ingin menghapus data transaksi ini dari MongoDB Atlas?')) return;
     await fetch(`${API_BASE}/api/transactions/${id}`, { method: 'DELETE' });
-    fetchDatabaseTransactions();
+    fetchDatabaseTransactions(user.username, user.role);
   };
 
   const handleUpdateStatusAdmin = async (id: string, currentStatus: string) => {
@@ -446,7 +476,7 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
       });
-      fetchDatabaseTransactions();
+      fetchDatabaseTransactions(user.username, user.role);
     } catch (err) {
       console.error('Gagal merubah status dari admin:', err);
     }
@@ -537,6 +567,7 @@ const App: React.FC = () => {
       await db.updateUserProfile(newUser);
       setUser(newUser);
       setBalance(0);
+      saveActiveSession(newUser);
 
       setShowAuthModal(false);
       setIsOtpStep(false);
@@ -551,6 +582,7 @@ const App: React.FC = () => {
       await db.updateUserProfile(existingUser);
       setUser(existingUser);
       setBalance(existingUser.balance || 0);
+      saveActiveSession(existingUser);
 
       setShowAuthModal(false);
       setIsOtpStep(false);
@@ -561,6 +593,7 @@ const App: React.FC = () => {
       setScreen('DASHBOARD');
       alert(`Login Berhasil & Terverifikasi WhatsApp OTP! Selamat Datang Kembali, ${username}.`);
     }
+    await fetchDatabaseTransactions(username, 'USER');
   };
 
   const handleGoogleLogin = async () => {
@@ -589,8 +622,11 @@ const App: React.FC = () => {
       await db.updateUserProfile(userData);
       setUser(userData);
       setBalance(userData.balance);
+      saveActiveSession(userData);
+
       setShowAuthModal(false);
       setScreen('DASHBOARD');
+      await fetchDatabaseTransactions(userData.username, 'USER');
       
       alert(`Berhasil Masuk dengan Akun Google: ${userData.username}`);
     } catch (error) {
@@ -612,7 +648,9 @@ const App: React.FC = () => {
     await db.updateUserProfile(guestProfile);
     setUser(guestProfile);
     setBalance(0);
+    saveActiveSession(guestProfile);
     setScreen('DASHBOARD');
+    await fetchDatabaseTransactions(guestProfile.username, 'GUEST');
   };
 
   const handleAdminAuthSubmit = async () => {
@@ -632,14 +670,25 @@ const App: React.FC = () => {
       await db.updateUserProfile(p);
       setUser(p);
       setBalance(p.balance);
+      saveActiveSession(p);
+
       setShowAdminLoginModal(false);
       setAdminUsernameInput('');
       setAdminPasswordInput('');
       setScreen('ADMIN');
+      await fetchDatabaseTransactions(p.username, 'ADMIN');
       alert('Akses Diterima! Selamat Datang, Administrator.');
     } else {
       alert('Akses Ditolak! Username atau Password Admin salah.');
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('flynnn_active_session');
+    const guestProfile = { username: 'GUEST COMMANDER', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Guest', status: 'Guest User', level: 1, balance: 0, role: 'GUEST' };
+    setUser(guestProfile);
+    setBalance(0);
+    setScreen('SPLASH');
   };
 
   const filteredGames = MOCK_GAMES.filter(g => {
@@ -649,7 +698,6 @@ const App: React.FC = () => {
   });
 
   const flashSaleGames = MOCK_GAMES.filter(g => g.discount > 0);
-  const myTransactions = allDbTransactions.filter((tx: any) => !tx.userId || tx.userId === user.username);
 
   return (
     <div className="min-h-screen relative text-white pb-10">
@@ -667,7 +715,7 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             {user?.role === 'ADMIN' ? (
-              <button onClick={() => { fetchDatabaseTransactions(); setScreen('ADMIN'); }} className="glass px-3 py-1.5 rounded-xl text-xs font-black uppercase text-[#00FFFF] border-[#00FFFF]/30 flex items-center gap-1 shadow-[0_0_15px_rgba(0,255,255,0.3)]">
+              <button onClick={() => { fetchDatabaseTransactions(user.username, user.role); setScreen('ADMIN'); }} className="glass px-3 py-1.5 rounded-xl text-xs font-black uppercase text-[#00FFFF] border-[#00FFFF]/30 flex items-center gap-1 shadow-[0_0_15px_rgba(0,255,255,0.3)]">
                 <Shield size={14} /> Panel Admin
               </button>
             ) : (
@@ -840,7 +888,6 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Slider Dots */}
             <div className="absolute bottom-3 right-4 z-20 flex gap-1.5">
               {PROMO_BANNERS.map((_, idx) => (
                 <button 
@@ -899,7 +946,6 @@ const App: React.FC = () => {
             </div>
           </GlassCard>
 
-          {/* FLASH SALE SECTION */}
           {flashSaleGames.length > 0 && (
             <section className="space-y-3">
               <div className="flex justify-between items-center">
@@ -929,7 +975,6 @@ const App: React.FC = () => {
             </section>
           )}
 
-          {/* FILTER KATEGORI GAME */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {CATEGORIES.map(cat => (
               <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase whitespace-nowrap border ${selectedCategory === cat ? 'bg-[#00FFFF] text-black border-[#00FFFF]' : 'glass text-white/60 border-white/5'}`}>
@@ -938,7 +983,6 @@ const App: React.FC = () => {
             ))}
           </div>
 
-          {/* KATALOG GAME */}
           <section className="space-y-3">
             <h3 className="text-[10px] font-black uppercase italic tracking-widest">Semua Game</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -957,7 +1001,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* ISI SALDO GALAKSI - NOMINAL */}
+      {/* ISI SALDO GALAKSI */}
       {screen === 'TOPUP_BALANCE' && (
         <div className="px-6 pt-24 pb-32 space-y-6 animate-in slide-in-from-bottom-8">
           <button onClick={() => setScreen('DASHBOARD')} className="glass p-2 rounded-xl border-white/10"><ArrowLeft size={18} /></button>
@@ -1036,7 +1080,6 @@ const App: React.FC = () => {
             </div>
           </section>
 
-          {/* KODE PROMO */}
           <section className="space-y-2">
             <h3 className="text-[10px] font-black uppercase text-white/40 tracking-widest">Kode Promo (Gunakan: ANGGATAMPAN)</h3>
             <div className="flex gap-2">
@@ -1106,12 +1149,12 @@ const App: React.FC = () => {
           <div className="px-6 pt-24 pb-32 space-y-6 animate-in fade-in">
             <div className="flex justify-between items-center">
               <button onClick={() => setScreen('DASHBOARD')} className="glass p-2 rounded-xl border-white/10"><ArrowLeft size={18} /></button>
-              <h2 className="text-lg font-black italic uppercase text-[#00FFFF]">Admin Control Panel</h2>
-              <button onClick={fetchDatabaseTransactions} className="glass p-2 rounded-xl text-white/60"><RefreshCw size={16} /></button>
+              <h2 className="text-lg font-black italic uppercase text-[#00FFFF]">Admin Control Panel (Semua Klien)</h2>
+              <button onClick={() => fetchDatabaseTransactions(user.username, user.role)} className="glass p-2 rounded-xl text-white/60"><RefreshCw size={16} /></button>
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-xs font-black uppercase tracking-widest text-white/40">Semua Transaksi Real-Time di Database MongoDB Atlas</h3>
+              <h3 className="text-xs font-black uppercase tracking-widest text-white/40">Daftar Transaksi Seluruh User di MongoDB Atlas</h3>
               {allDbTransactions.length === 0 ? (
                 <p className="text-center text-xs text-white/20 py-10">Belum ada data transaksi tersimpan.</p>
               ) : (
@@ -1120,7 +1163,7 @@ const App: React.FC = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-black text-xs uppercase text-[#00FFFF]">{tx.game}</h4>
-                        {tx.orderId && <p className="text-[8px] text-white/50 font-mono">{tx.orderId}</p>}
+                        <p className="text-[9px] text-[#00FFFF]/70 font-mono">User: {tx.userId || 'Guest'} | Order: {tx.orderId}</p>
                         <p className="text-[9px] text-white/70 font-bold">ID / User: {tx.userIdGame} (Server: {tx.zoneId})</p>
                         <p className="text-[8px] text-white/40">{new Date(tx.createdAt).toLocaleString()}</p>
                       </div>
@@ -1153,18 +1196,18 @@ const App: React.FC = () => {
         )
       )}
 
-      {/* RIWAYAT TRANSAKSI CUSTOMER */}
+      {/* RIWAYAT TRANSAKSI KLIEN */}
       {screen === 'HISTORY' && (
         <div className="px-6 pt-24 pb-32 space-y-6 animate-in fade-in">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-black italic uppercase tracking-tighter">Riwayat Transaksi Saya</h2>
-            <button onClick={fetchDatabaseTransactions} className="glass p-2 rounded-xl text-white/60"><RefreshCw size={16} /></button>
+            <button onClick={() => fetchDatabaseTransactions(user.username, user.role)} className="glass p-2 rounded-xl text-white/60"><RefreshCw size={16} /></button>
           </div>
-          {myTransactions.length === 0 ? (
+          {allDbTransactions.length === 0 ? (
             <div className="py-20 text-center text-white/20 uppercase font-black tracking-[0.3em] text-xs">BELUM ADA RIWAYAT TRANSAKSI</div>
           ) : (
             <div className="space-y-3">
-              {myTransactions.map((tx: any) => (
+              {allDbTransactions.map((tx: any) => (
                 <GlassCard key={tx._id} className="flex items-center gap-4 border-white/5">
                   <div className="w-12 h-12 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-[#00FFFF] font-black text-xs uppercase">
                     {tx.game ? tx.game.slice(0, 3) : 'TOP'}
@@ -1202,7 +1245,7 @@ const App: React.FC = () => {
           <h2 className="text-3xl font-black italic uppercase tracking-tighter">{user.username}</h2>
           <span className="text-[#00FFFF] text-[10px] font-black uppercase tracking-[0.5em] mb-8 block">{user.status}</span>
           
-          <button onClick={() => setScreen('SPLASH')} className="w-full glass py-4 rounded-2xl text-red-400 font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 border-red-500/20 active:bg-red-500/10">
+          <button onClick={handleLogout} className="w-full glass py-4 rounded-2xl text-red-400 font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 border-red-500/20 active:bg-red-500/10">
             <LogOut size={18} /> KELUAR / GANTI AKUN
           </button>
         </div>

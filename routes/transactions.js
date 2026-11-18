@@ -37,7 +37,6 @@ router.post('/', async (req, res) => {
         const cleanMethod = String(metodePembayaran).trim();
         const orderId = `FLYNNN-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
 
-        // 1. Jika pembayaran menggunakan Saldo Galaksi (Dompet Internal)
         if (cleanMethod === 'WALLET') {
             const newTransaction = new Transaction({
                 orderId,
@@ -59,7 +58,6 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // 2. Jika pembayaran menggunakan Payment Gateway Midtrans (QRIS, E-Wallet, VA, Retail)
         if (!process.env.MIDTRANS_SERVER_KEY) {
             return res.status(500).json({
                 success: false,
@@ -123,7 +121,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// POST: Verifikasi Status Transaksi Langsung ke API Midtrans setelah pop-up selesai
+// POST: Verifikasi Status Transaksi Langsung ke API Midtrans
 router.post('/verify/:orderId', async (req, res, next) => {
     try {
         const orderId = String(req.params.orderId).trim();
@@ -156,7 +154,7 @@ router.post('/verify/:orderId', async (req, res, next) => {
     }
 });
 
-// POST: Webhook Resmi dari Server Midtrans (Otomatis jalan saat uang masuk)
+// POST: Webhook Resmi dari Server Midtrans
 router.post('/midtrans-notification', async (req, res) => {
     try {
         const notification = req.body;
@@ -192,10 +190,18 @@ router.post('/midtrans-notification', async (req, res) => {
     }
 });
 
-// GET: Ambil Semua Riwayat Transaksi
+// GET: Ambil Riwayat Transaksi (Bisa difilter berdasarkan userId klien atau semua untuk admin)
 router.get('/', async (req, res, next) => {
     try {
-        const history = await Transaction.find().sort({ createdAt: -1 });
+        const { userId } = req.query;
+        let query = {};
+        
+        // Jika ada parameter userId dan bukan admin, filter khusus milik user tersebut
+        if (userId && userId !== 'ADMINISTRATOR') {
+            query = { userId: String(userId).trim() };
+        }
+
+        const history = await Transaction.find(query).sort({ createdAt: -1 });
         res.json(history);
     } catch (err) {
         next(err);
@@ -210,11 +216,6 @@ router.put('/:id', async (req, res, next) => {
         }
 
         const { status } = req.body;
-        const allowedStatus = ['Pending', 'Success', 'Canceled'];
-        if (!allowedStatus.includes(status)) {
-            return res.status(400).json({ success: false, message: 'Status transaksi tidak valid' });
-        }
-
         const updated = await Transaction.findByIdAndUpdate(
             req.params.id,
             { status },
@@ -225,11 +226,7 @@ router.put('/:id', async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' });
         }
 
-        res.json({
-            success: true,
-            message: 'Status transaksi berhasil diperbarui',
-            data: updated
-        });
+        res.json({ success: true, message: 'Status transaksi berhasil diperbarui', data: updated });
     } catch (err) {
         next(err);
     }
@@ -247,10 +244,7 @@ router.delete('/:id', async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' });
         }
 
-        res.json({
-            success: true,
-            message: 'Transaksi berhasil dihapus'
-        });
+        res.json({ success: true, message: 'Transaksi berhasil dihapus' });
     } catch (err) {
         next(err);
     }
