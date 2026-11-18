@@ -180,7 +180,6 @@ const App: React.FC = () => {
           await creditBalanceSafely(returnedOrderId, Number(verifyData.data.harga));
         }
 
-        // Ambil sesi user yang aktif dari localStorage agar tidak terlempar ke login
         const activeSession = JSON.parse(localStorage.getItem('flynnn_active_session') || '{}');
         if (activeSession.username) {
           setUser(activeSession);
@@ -209,7 +208,6 @@ const App: React.FC = () => {
   };
 
   const loadData = async () => {
-    // Cek sesi aktif di localStorage terlebih dahulu
     const activeSession = JSON.parse(localStorage.getItem('flynnn_active_session') || '{}');
     if (activeSession.username) {
       setUser(activeSession);
@@ -244,7 +242,6 @@ const App: React.FC = () => {
       const uname = currentUsername || user.username;
       const urole = currentRole || user.role;
 
-      // Jika admin, ambil semua transaksi. Jika user biasa, ambil hanya miliknya via query userId
       const url = (urole === 'ADMIN') 
         ? `${API_BASE}/api/transactions` 
         : `${API_BASE}/api/transactions?userId=${encodeURIComponent(uname || '')}`;
@@ -319,7 +316,6 @@ const App: React.FC = () => {
     window.snap.pay(snapToken, {
       onSuccess: async () => {
         try {
-          // Paksa verifikasi instan ke backend agar status langsung jadi Success
           const verifyRes = await fetch(`${API_BASE}/api/transactions/verify/${orderId}`, {
             method: 'POST'
           });
@@ -343,7 +339,6 @@ const App: React.FC = () => {
         alert('Pembayaran gagal diproses. Silakan coba lagi.');
       },
       onClose: async () => {
-        // Meskipun ditutup, cek sekali lagi status ke Midtrans (siapa tahu sudah dibayar)
         try {
           await fetch(`${API_BASE}/api/transactions/verify/${orderId}`, {
             method: 'POST'
@@ -868,7 +863,6 @@ const App: React.FC = () => {
       {screen === 'DASHBOARD' && (
         <div className="px-6 pt-24 pb-32 space-y-6 animate-in fade-in duration-500">
           
-          {/* BANNER PROMOSI WIDESCREEN */}
           <div className="relative w-full rounded-2xl overflow-hidden glass border border-[#00FFFF]/30 shadow-xl bg-gradient-to-r from-[#1A0B3B] via-[#0B011E] to-[#1A0B3B] min-h-[220px] flex items-center">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,229,255,0.15)_0%,transparent_75%)] pointer-events-none"></div>
             
@@ -1229,13 +1223,39 @@ const App: React.FC = () => {
                   <div className="text-right space-y-1">
                     <p className="text-[#00FFFF] font-black text-xs tracking-tighter">Rp {tx.harga?.toLocaleString()}</p>
                     <span className={`block text-[7px] font-black uppercase tracking-[0.2em] ${tx.status === 'Success' ? 'text-green-400' : 'text-yellow-400'}`}>{tx.status}</span>
-                    {tx.status === 'Pending' && tx.snapToken && tx.orderId && (
-                      <button
-                        onClick={() => openMidtransSnap(tx.snapToken, tx.orderId, tx.game === 'Isi Saldo Galaksi', tx.harga)}
-                        className="bg-[#00FFFF] text-black px-2.5 py-1 rounded-lg text-[8px] font-black uppercase"
-                      >
-                        Bayar Sekarang
-                      </button>
+                    {tx.status === 'Pending' && tx.orderId && (
+                      <div className="flex gap-1.5 mt-1 justify-end">
+                        {tx.snapToken && (
+                          <button
+                            onClick={() => openMidtransSnap(tx.snapToken, tx.orderId, tx.game === 'Isi Saldo Galaksi', tx.harga)}
+                            className="bg-[#00FFFF] text-black px-2 py-1 rounded-lg text-[7px] font-black uppercase"
+                          >
+                            Bayar
+                          </button>
+                        )}
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`${API_BASE}/api/transactions/verify/${tx.orderId}`, { method: 'POST' });
+                              const data = await res.json();
+                              if (data.success && data.data.status === 'Success') {
+                                if (tx.game === 'Isi Saldo Galaksi') {
+                                  await creditBalanceSafely(tx.orderId, tx.harga);
+                                }
+                                alert('Status berhasil diverifikasi menjadi Success!');
+                                await fetchDatabaseTransactions(user.username, user.role);
+                              } else {
+                                alert(`Status di Midtrans saat ini: ${data.midtransStatus || 'Belum Lunas'}`);
+                              }
+                            } catch (e) {
+                              alert('Gagal mengecek status.');
+                            }
+                          }}
+                          className="glass border border-[#00FFFF]/40 text-[#00FFFF] px-2 py-1 rounded-lg text-[7px] font-black uppercase"
+                        >
+                          Cek Status
+                        </button>
+                      </div>
                     )}
                   </div>
                 </GlassCard>
