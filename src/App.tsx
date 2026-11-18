@@ -256,21 +256,38 @@ const App: React.FC = () => {
     }
   };
 
-  const handleVerifyId = () => {
+  const handleVerifyId = async () => {
     if (!userIdGame) {
       alert('Masukkan User ID Game terlebih dahulu!');
       return;
     }
     setIsVerifying(true);
-    
-    setTimeout(() => {
+    setVerifiedNickname('');
+
+    try {
+      const response = await fetch(`${API_BASE}/api/games/check-username`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameCode: selectedGame?.name.toLowerCase().includes('mobile legends') ? 'mobile-legends' : 'free-fire',
+          userId: userIdGame.trim(),
+          zoneId: zoneId.trim()
+        })
+      });
+
+      const data = await response.json();
       setIsVerifying(false);
-      if (userIdGame.trim() === '312713319' && (zoneId.trim() === '9655' || !zoneId)) {
-        setVerifiedNickname('Anka_*');
+
+      if (response.ok && data.success && data.nickname) {
+        setVerifiedNickname(data.nickname);
       } else {
-        setVerifiedNickname(`PLAYER_${userIdGame.slice(-4) || '88'}_PRO`);
+        alert(data.message || 'Gagal memverifikasi ID game. Periksa kembali User ID & Zone ID.');
       }
-    }, 800);
+    } catch (err) {
+      setIsVerifying(false);
+      console.error('Network Error:', err);
+      alert('Terjadi kesalahan jaringan saat menghubungi server game.');
+    }
   };
 
   const handleApplyPromo = () => {
