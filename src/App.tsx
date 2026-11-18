@@ -319,15 +319,17 @@ const App: React.FC = () => {
     window.snap.pay(snapToken, {
       onSuccess: async () => {
         try {
-          await fetch(`${API_BASE}/api/transactions/verify/${orderId}`, {
+          // Paksa verifikasi instan ke backend agar status langsung jadi Success
+          const verifyRes = await fetch(`${API_BASE}/api/transactions/verify/${orderId}`, {
             method: 'POST'
           });
+          const verifyData = await verifyRes.json();
+          
+          if (verifyData.success && isBalanceTopup) {
+            await creditBalanceSafely(orderId, amount);
+          }
         } catch (err) {
           console.error('Gagal verifikasi otomatis ke backend:', err);
-        }
-
-        if (isBalanceTopup) {
-          await creditBalanceSafely(orderId, amount);
         }
 
         alert('Pembayaran Berhasil Diterima oleh Midtrans! Pesanan kamu sedang diproses.');
@@ -341,7 +343,14 @@ const App: React.FC = () => {
         alert('Pembayaran gagal diproses. Silakan coba lagi.');
       },
       onClose: async () => {
-        alert('Jendela pembayaran ditutup. Kamu dapat melanjutkan pembayaran melalui menu Riwayat Transaksi.');
+        // Meskipun ditutup, cek sekali lagi status ke Midtrans (siapa tahu sudah dibayar)
+        try {
+          await fetch(`${API_BASE}/api/transactions/verify/${orderId}`, {
+            method: 'POST'
+          });
+        } catch (e) {}
+
+        alert('Jendela pembayaran ditutup. Status transaksi diperbarui.');
         await resetAndGoToHistory();
       }
     });
