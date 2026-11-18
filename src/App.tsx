@@ -127,12 +127,76 @@ const App: React.FC = () => {
   const [allDbTransactions, setAllDbTransactions] = useState<any[]>([]);
 
   useEffect(() => {
-    loadData();
+    const initApp = async () => {
+      await loadData();
+      await handleMidtransRedirectReturn();
+    };
+    initApp();
+
     const bannerTimer = setInterval(() => {
       setCurrentBannerIndex((prev) => (prev + 1) % PROMO_BANNERS.length);
     }, 5000);
     return () => clearInterval(bannerTimer);
   }, []);
+
+  const creditBalanceSafely = async (orderId: string, amountToAdd: number) => {
+    const creditedOrders = JSON.parse(localStorage.getItem('flynnn_credited_orders') || '[]');
+    if (creditedOrders.includes(orderId)) return;
+
+    creditedOrders.push(orderId);
+    localStorage.setItem('flynnn_credited_orders', JSON.stringify(creditedOrders));
+
+    const currentProfile = await db.getUserProfile();
+    if (!currentProfile || currentProfile.role === 'GUEST') return;
+
+    const registeredUsers = JSON.parse(localStorage.getItem('flynnn_registered_users') || '{}');
+    const currentBal = registeredUsers[currentProfile.username]?.balance ?? currentProfile.balance ?? 0;
+    const newBal = currentBal + amountToAdd;
+
+    const updatedUser = { ...currentProfile, balance: newBal };
+    await db.updateUserProfile(updatedUser);
+    setUser(updatedUser);
+    setBalance(newBal);
+
+    if (registeredUsers[currentProfile.username]) {
+      registeredUsers[currentProfile.username].balance = newBal;
+      localStorage.setItem('flynnn_registered_users', JSON.stringify(registeredUsers));
+    }
+  };
+
+  const handleMidtransRedirectReturn = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const returnedOrderId = params.get('order_id');
+    if (!returnedOrderId) return;
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/transactions/verify/${returnedOrderId}`, {
+        method: 'POST'
+      });
+      const verifyData = await res.json();
+
+      if (verifyData.success && verifyData.data) {
+        if (verifyData.data.status === 'Success' && verifyData.data.game === 'Isi Saldo Galaksi') {
+          await creditBalanceSafely(returnedOrderId, Number(verifyData.data.harga));
+        }
+
+        await fetchDatabaseTransactions();
+        setScreen('HISTORY');
+
+        if (verifyData.data.status === 'Success') {
+          alert('Pembayaran Midtrans Berhasil! Transaksi kamu telah lunas dan diproses.');
+        } else {
+          alert('Transaksi tercatat. Kamu dapat mengecek atau melanjutkan pembayaran di Riwayat Transaksi.');
+        }
+      }
+    } catch (err) {
+      console.error('Gagal memverifikasi hasil redirect Midtrans:', err);
+      await fetchDatabaseTransactions();
+      setScreen('HISTORY');
+    }
+  };
 
   const loadData = async () => {
     const p = await db.getUserProfile();
@@ -149,7 +213,7 @@ const App: React.FC = () => {
       setBalance(p.balance || 0);
     }
     setDbSynced(true);
-    fetchDatabaseTransactions();
+    await fetchDatabaseTransactions();
   };
 
   const fetchDatabaseTransactions = async () => {
@@ -215,20 +279,6 @@ const App: React.FC = () => {
     setScreen('PAYMENT');
   };
 
-  const creditLocalUserBalance = async (amountToAdd: number) => {
-    const newBal = balance + amountToAdd;
-    const updatedUser = { ...user, balance: newBal };
-    await db.updateUserProfile(updatedUser);
-    setUser(updatedUser);
-    setBalance(newBal);
-
-    const registeredUsers = JSON.parse(localStorage.getItem('flynnn_registered_users') || '{}');
-    if (registeredUsers[user.username]) {
-      registeredUsers[user.username].balance = newBal;
-      localStorage.setItem('flynnn_registered_users', JSON.stringify(registeredUsers));
-    }
-  };
-
   const openMidtransSnap = (snapToken: string, orderId: string, isBalanceTopup: boolean, amount: number) => {
     if (!window.snap) {
       alert('Skrip Midtrans Snap belum termuat. Silakan refresh halaman!');
@@ -246,7 +296,7 @@ const App: React.FC = () => {
         }
 
         if (isBalanceTopup) {
-          await creditLocalUserBalance(amount);
+          await creditBalanceSafely(orderId, amount);
         }
 
         alert('Pembayaran Berhasil Diterima oleh Midtrans! Pesanan kamu sedang diproses.');

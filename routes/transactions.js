@@ -84,6 +84,9 @@ router.post('/', async (req, res) => {
             customer_details: {
                 first_name: cleanUserId || 'Customer Flynnnstore',
                 phone: whatsapp ? String(whatsapp).trim() : '081234567890'
+            },
+            callbacks: {
+                finish: 'https://flynnnstore.web.app'
             }
         };
 
