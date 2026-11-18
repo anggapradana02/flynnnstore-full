@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
@@ -55,38 +56,49 @@ const User = require('../models/User');
  *       201:
  *         description: Order Top Up Berhasil Dibuat.
  *       400:
- *         description: Validasi gagal, field wajib kurang lengkap.
+ *         description: Validasi gagal, field wajib kurang lengkap atau tidak valid.
  */
 router.post('/', async (req, res, next) => {
     try {
-        const { game, userIdGame, nominal, harga, metodePembayaran, status, userId } = req.body;
+        const { game, userIdGame, zoneId, nominal, harga, metodePembayaran, status, userId } = req.body;
         
-        if (!game || !userIdGame || !nominal || !harga || !metodePembayaran) {
+        if (!game || !userIdGame || !nominal || harga === undefined || !metodePembayaran) {
             return res.status(400).json({ 
                 success: false, 
                 message: 'Validasi Gagal: Semua field transaksi wajib diisi secara lengkap!' 
             });
         }
 
-        const initialStatus = status || 'Pending';
+        const numericHarga = Number(harga);
+        if (isNaN(numericHarga) || numericHarga <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validasi Gagal: Nominal harga harus berupa angka lebih dari 0!'
+            });
+        }
+
+        const allowedStatus = ['Pending', 'Success', 'Failed'];
+        const initialStatus = allowedStatus.includes(status) ? status : 'Pending';
+        const cleanUserId = userId ? String(userId).trim() : null;
+        const cleanGame = String(game).trim();
 
         const newTransaction = new Transaction({
-            game,
-            userIdGame,
-            zoneId: req.body.zoneId || '-',
-            nominal,
-            harga,
-            metodePembayaran,
+            game: cleanGame,
+            userIdGame: String(userIdGame).trim(),
+            zoneId: zoneId ? String(zoneId).trim() : '-',
+            nominal: String(nominal).trim(),
+            harga: numericHarga,
+            metodePembayaran: String(metodePembayaran).trim(),
             status: initialStatus,
-            userId: userId || null
+            userId: cleanUserId
         });
 
         const savedData = await newTransaction.save();
 
-        if (initialStatus === 'Success' && userId && game === 'Isi Saldo Galaksi') {
+        if (initialStatus === 'Success' && cleanUserId && cleanGame === 'Isi Saldo Galaksi') {
             await User.findOneAndUpdate(
-                { username: userId },
-                { $inc: { saldo: Number(harga) } }
+                { username: cleanUserId },
+                { $inc: { saldo: numericHarga } }
             );
         }
 
@@ -155,7 +167,15 @@ router.get('/', async (req, res, next) => {
  */
 router.put('/:id', async (req, res, next) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ success: false, message: 'Format ID transaksi tidak valid' });
+        }
+
         const { status } = req.body;
+        const allowedStatus = ['Pending', 'Success', 'Failed'];
+        if (!allowedStatus.includes(status)) {
+            return res.status(400).json({ success: false, message: 'Status transaksi tidak valid' });
+        }
         
         const txOld = await Transaction.findById(req.params.id);
         if (!txOld) {
@@ -172,7 +192,7 @@ router.put('/:id', async (req, res, next) => {
         if (status === 'Success' && txOld.status !== 'Success') {
             if (updated.game === 'Isi Saldo Galaksi' && updated.userId) {
                 await User.findOneAndUpdate(
-                    { username: updated.userId },
+                    { username: String(updated.userId) },
                     { $inc: { saldo: Number(updated.harga) } }
                 );
             }
@@ -190,6 +210,10 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ success: false, message: 'Format ID transaksi tidak valid' });
+        }
+
         const deleted = await Transaction.findByIdAndDelete(req.params.id);
         
         if (!deleted) {

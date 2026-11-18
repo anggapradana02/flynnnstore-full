@@ -24,7 +24,7 @@ const axios = require('axios');
  *       200:
  *         description: OTP berhasil dikirim.
  *       400:
- *         description: Nomor WhatsApp wajib diisi.
+ *         description: Nomor WhatsApp wajib diisi atau format tidak valid.
  */
 router.post('/send-whatsapp-otp', async (req, res, next) => {
     try {
@@ -37,6 +37,14 @@ router.post('/send-whatsapp-otp', async (req, res, next) => {
             });
         }
 
+        const cleanPhone = String(phone).trim();
+        if (!/^[0-9+]{9,15}$/.test(cleanPhone)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Format nomor WhatsApp tidak valid (gunakan 9-15 digit angka)!'
+            });
+        }
+
         // Generate 4 digit kode OTP acak
         const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
 
@@ -45,7 +53,7 @@ router.post('/send-whatsapp-otp', async (req, res, next) => {
 
         try {
             await axios.post('https://api.fonnte.com/send', {
-                target: phone,
+                target: cleanPhone,
                 message: `[FLYNNNSTORE SECURITY] Kode verifikasi OTP Anda adalah: *${otpCode}*. Berlaku selama 5 menit. Jangan bagikan ke siapa pun.`
             }, {
                 headers: { Authorization: tokenFonnte }
