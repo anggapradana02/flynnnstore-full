@@ -14,6 +14,12 @@ import { MOCK_GAMES } from '../constants';
 import { db } from '../db';
 import GlassCard from '../components/GlassCard';
 
+declare global {
+  interface Window {
+    snap: any;
+  }
+}
+
 const TechLogo = ({ size = 40, animated = false }: { size?: number, animated?: boolean }) => (
   <div style={{ width: size, height: size }} className={`relative ${animated ? 'animate-energy' : 'drop-shadow-[0_0_15px_rgba(0,255,255,0.6)]'}`}>
     <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -38,13 +44,11 @@ const StoreTitle = ({ className = "" }) => (
 
 const PAYMENT_METHODS = [
   { id: 'WALLET', name: 'Saldo Galaksi (Dompet Akun)', category: 'Instant Balance', icon: <Wallet size={20} /> },
-  { id: 'QRIS', name: 'QRIS (Semua E-Wallet / Bank)', category: 'Instant', icon: <QrCode size={20} /> },
-  { id: 'GOPAY', name: 'GoPay', category: 'E-Wallet', icon: <PhoneIcon size={20} /> },
-  { id: 'OVO', name: 'OVO', category: 'E-Wallet', icon: <PhoneIcon size={20} /> },
-  { id: 'DANA', name: 'DANA', category: 'E-Wallet', icon: <PhoneIcon size={20} /> },
-  { id: 'VA_BCA', name: 'BCA Virtual Account', category: 'Bank VA', icon: <Banknote size={20} /> },
-  { id: 'VA_MANDIRI', name: 'Mandiri Virtual Account', category: 'Bank VA', icon: <Banknote size={20} /> },
-  { id: 'RETAIL', name: 'Indomaret / Alfamart', category: 'Gerai Ritel', icon: <CardIcon size={20} /> }
+  { id: 'QRIS', name: 'QRIS (Semua E-Wallet / Bank)', category: 'Midtrans Snap', icon: <QrCode size={20} /> },
+  { id: 'GOPAY', name: 'GoPay / E-Wallet', category: 'Midtrans Snap', icon: <PhoneIcon size={20} /> },
+  { id: 'VA_BCA', name: 'BCA Virtual Account', category: 'Midtrans Snap', icon: <Banknote size={20} /> },
+  { id: 'VA_MANDIRI', name: 'Mandiri Virtual Account', category: 'Midtrans Snap', icon: <Banknote size={20} /> },
+  { id: 'RETAIL', name: 'Indomaret / Alfamart', category: 'Midtrans Snap', icon: <CardIcon size={20} /> }
 ];
 
 const CATEGORIES = ['Semua', 'MOBA', 'FPS', 'Battle Royale', 'RPG', 'Sports'];
@@ -66,12 +70,14 @@ const PROMO_BANNERS = [
   },
   {
     title: "GARANSI 100% AMAN & LEGAL",
-    subtitle: "TERINTEGRASI FIREBASE OAUTH & MONGODB ATLAS PAYMENT GATEWAY RESMI",
+    subtitle: "TERINTEGRASI FIREBASE OAUTH, MONGODB ATLAS & MIDTRANS PAYMENT GATEWAY RESMI",
     badge: "OFFICIAL VENDOR",
     image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200&auto=format&fit=crop&q=80",
     buttonText: "CEK KEAMANAN"
   }
 ];
+
+const API_BASE = 'https://flynnnstore-full.onrender.com';
 
 const App: React.FC = () => {
   const [screen, setScreen] = useState<Screen>('SPLASH');
@@ -80,6 +86,7 @@ const App: React.FC = () => {
   const [dbSynced, setDbSynced] = useState(false);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [pending, setPending] = useState<any>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Banner Promo State
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
@@ -101,9 +108,7 @@ const App: React.FC = () => {
   // Top Up Saldo State
   const [topupAmountInput, setTopupAmountInput] = useState('');
 
-  // Modals & Authentication State
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [activeDbTxId, setActiveDbTxId] = useState<string | null>(null);
+  // Authentication State
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authInputName, setAuthInputName] = useState('');
   const [authInputPassword, setAuthInputPassword] = useState('');
@@ -149,7 +154,7 @@ const App: React.FC = () => {
 
   const fetchDatabaseTransactions = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/transactions');
+      const res = await fetch(`${API_BASE}/api/transactions`);
       if (res.ok) {
         const data = await res.json();
         setAllDbTransactions(data);
@@ -210,31 +215,60 @@ const App: React.FC = () => {
     setScreen('PAYMENT');
   };
 
-  const createTransactionInDb = async (method: string, price: number, initialStatus: string, gameName: string) => {
-    try {
-      const res = await fetch('http://localhost:5000/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          game: gameName,
-          userIdGame: pending.type === 'BALANCE' ? `${user.username} (Topup Saldo)` : `${userIdGame} (${verifiedNickname || 'Unverified'})`,
-          zoneId: zoneId || '-',
-          nominal: pending.nominal,
-          harga: price,
-          metodePembayaran: method,
-          status: initialStatus,
-          userId: user.username
-        })
-      });
-      const resData = await res.json();
-      return resData.data;
-    } catch (err) {
-      console.error('Gagal menyimpan transaksi ke MongoDB:', err);
-      return null;
+  const creditLocalUserBalance = async (amountToAdd: number) => {
+    const newBal = balance + amountToAdd;
+    const updatedUser = { ...user, balance: newBal };
+    await db.updateUserProfile(updatedUser);
+    setUser(updatedUser);
+    setBalance(newBal);
+
+    const registeredUsers = JSON.parse(localStorage.getItem('flynnn_registered_users') || '{}');
+    if (registeredUsers[user.username]) {
+      registeredUsers[user.username].balance = newBal;
+      localStorage.setItem('flynnn_registered_users', JSON.stringify(registeredUsers));
     }
   };
 
+  const openMidtransSnap = (snapToken: string, orderId: string, isBalanceTopup: boolean, amount: number) => {
+    if (!window.snap) {
+      alert('Skrip Midtrans Snap belum termuat. Silakan refresh halaman!');
+      return;
+    }
+
+    window.snap.pay(snapToken, {
+      onSuccess: async () => {
+        try {
+          await fetch(`${API_BASE}/api/transactions/verify/${orderId}`, {
+            method: 'POST'
+          });
+        } catch (err) {
+          console.error('Gagal verifikasi otomatis ke backend:', err);
+        }
+
+        if (isBalanceTopup) {
+          await creditLocalUserBalance(amount);
+        }
+
+        alert('Pembayaran Berhasil Diterima oleh Midtrans! Pesanan kamu sedang diproses.');
+        await resetAndGoToHistory();
+      },
+      onPending: async () => {
+        alert('Tagihan berhasil dibuat! Silakan selesaikan pembayaran sesuai instruksi.');
+        await resetAndGoToHistory();
+      },
+      onError: () => {
+        alert('Pembayaran gagal diproses. Silakan coba lagi.');
+      },
+      onClose: async () => {
+        alert('Jendela pembayaran ditutup. Kamu dapat melanjutkan pembayaran melalui menu Riwayat Transaksi.');
+        await resetAndGoToHistory();
+      }
+    });
+  };
+
   const handleInitiatePayment = async (method: string) => {
+    if (isProcessingPayment) return;
+
     if (pending.type === 'GAME') {
       if (!userIdGame) {
         alert('Harap isi User ID Game kamu dulu!');
@@ -246,36 +280,38 @@ const App: React.FC = () => {
       }
     }
 
+    if (pending.type === 'BALANCE' && method === 'WALLET') {
+      alert('Pilih metode pembayaran QRIS, E-Wallet, Virtual Account, atau Gerai Ritel untuk mengisi Saldo Galaksi.');
+      return;
+    }
+
     const finalPrice = pending.type === 'GAME' ? Math.max(0, pending.price - discountAmount) : pending.price;
 
+    // 1. Pembayaran menggunakan Saldo Galaksi (Dompet Akun)
     if (method === 'WALLET' && pending.type === 'GAME') {
       if (balance < finalPrice) {
         alert(`Saldo tidak cukup! Saldo kamu Rp ${balance?.toLocaleString() ?? 0}. Silakan isi saldo terlebih dahulu.`);
         return;
       }
-      await createTransactionInDb(method, finalPrice, 'Success', pending.gameName);
-      const newBal = Math.max(0, balance - finalPrice);
-      const updatedUser = { ...user, balance: newBal };
-      await db.updateUserProfile(updatedUser);
-      setUser(updatedUser);
-      setBalance(newBal);
 
-      const registeredUsers = JSON.parse(localStorage.getItem('flynnn_registered_users') || '{}');
-      if (registeredUsers[user.username]) {
-        registeredUsers[user.username].balance = newBal;
-        localStorage.setItem('flynnn_registered_users', JSON.stringify(registeredUsers));
-      }
+      setIsProcessingPayment(true);
+      try {
+        await fetch(`${API_BASE}/api/transactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            game: pending.gameName,
+            userIdGame: `${userIdGame} (${verifiedNickname || 'Unverified'})`,
+            zoneId: zoneId || '-',
+            nominal: pending.nominal,
+            harga: finalPrice,
+            metodePembayaran: method,
+            status: 'Success',
+            userId: user.username
+          })
+        });
 
-      resetAndGoToHistory();
-    } else {
-      const initialStatus = pending.type === 'BALANCE' ? 'Success' : 'Pending';
-      const newTx = await createTransactionInDb(method, finalPrice, initialStatus, pending.gameName);
-      if (newTx && newTx._id) {
-        setActiveDbTxId(newTx._id);
-      }
-
-      if (pending.type === 'BALANCE') {
-        const newBal = balance + pending.price;
+        const newBal = Math.max(0, balance - finalPrice);
         const updatedUser = { ...user, balance: newBal };
         await db.updateUserProfile(updatedUser);
         setUser(updatedUser);
@@ -286,53 +322,76 @@ const App: React.FC = () => {
           registeredUsers[user.username].balance = newBal;
           localStorage.setItem('flynnn_registered_users', JSON.stringify(registeredUsers));
         }
-        resetAndGoToHistory();
-      } else {
-        setShowPaymentModal(true);
-        fetchDatabaseTransactions();
-      }
-    }
-  };
 
-  const handleConfirmPayment = async () => {
-    if (activeDbTxId) {
-      try {
-        await fetch(`http://localhost:5000/api/transactions/${activeDbTxId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'Success' })
-        });
-      } catch (err) {
-        console.error('Gagal update status transaksi:', err);
+        await resetAndGoToHistory();
+      } finally {
+        setIsProcessingPayment(false);
       }
+      return;
     }
-    await resetAndGoToHistory();
+
+    // 2. Pembayaran via Midtrans Snap (QRIS, GoPay, VA BCA, VA Mandiri, Retail)
+    setIsProcessingPayment(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          game: pending.gameName,
+          userIdGame: pending.type === 'BALANCE' ? `${user.username} (Topup Saldo)` : `${userIdGame} (${verifiedNickname || 'Unverified'})`,
+          zoneId: zoneId || '-',
+          nominal: pending.nominal,
+          harga: finalPrice,
+          metodePembayaran: method,
+          status: 'Pending',
+          userId: user.username,
+          whatsapp
+        })
+      });
+
+      const resData = await res.json();
+      if (!res.ok || !resData.snapToken) {
+        alert(resData.message || 'Gagal membuat sesi pembayaran Midtrans.');
+        return;
+      }
+
+      openMidtransSnap(
+        resData.snapToken,
+        resData.data.orderId,
+        pending.type === 'BALANCE',
+        finalPrice
+      );
+    } catch (err) {
+      console.error('Gagal memproses transaksi Midtrans:', err);
+      alert('Terjadi kesalahan koneksi ke server pembayaran. Pastikan server Render aktif.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const resetAndGoToHistory = async () => {
     await fetchDatabaseTransactions();
-    setShowPaymentModal(false);
     setPending(null);
-    setActiveDbTxId(null);
     setUserIdGame('');
     setZoneId('');
     setVerifiedNickname('');
     setPromoCode('');
     setDiscountAmount(0);
     setPromoSuccess(false);
+    setTopupAmountInput('');
     setScreen('HISTORY');
   };
 
   const handleDeleteAdminTx = async (id: string) => {
     if (!confirm('Yakin ingin menghapus data transaksi ini dari MongoDB Atlas?')) return;
-    await fetch(`http://localhost:5000/api/transactions/${id}`, { method: 'DELETE' });
+    await fetch(`${API_BASE}/api/transactions/${id}`, { method: 'DELETE' });
     fetchDatabaseTransactions();
   };
 
   const handleUpdateStatusAdmin = async (id: string, currentStatus: string) => {
     const nextStatus = currentStatus === 'Success' ? 'Pending' : 'Success';
     try {
-      await fetch(`http://localhost:5000/api/transactions/${id}`, {
+      await fetch(`${API_BASE}/api/transactions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
@@ -377,7 +436,7 @@ const App: React.FC = () => {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/send-whatsapp-otp', {
+      const res = await fetch(`${API_BASE}/api/auth/send-whatsapp-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phone || registeredUsers[username]?.phone || '081234567890' })
@@ -389,7 +448,7 @@ const App: React.FC = () => {
         setIsOtpStep(true);
         alert(`[WHATSAPP OTP GATEWAY]\nKode OTP Anda telah dikirim ke WhatsApp.\n(Kode untuk uji coba sidang: ${data.otp})`);
       } else {
-        alert('Gagal mengirim OTP ke WhatsApp.');
+        alert(data.message || 'Gagal mengirim OTP ke WhatsApp.');
       }
     } catch (err) {
       console.error('Error OTP:', err);
@@ -540,6 +599,7 @@ const App: React.FC = () => {
   });
 
   const flashSaleGames = MOCK_GAMES.filter(g => g.discount > 0);
+  const myTransactions = allDbTransactions.filter((tx: any) => !tx.userId || tx.userId === user.username);
 
   return (
     <div className="min-h-screen relative text-white pb-10">
@@ -551,7 +611,7 @@ const App: React.FC = () => {
               <StoreTitle />
               <div className="flex items-center gap-1">
                 <div className={`w-1.5 h-1.5 rounded-full ${dbSynced ? 'bg-green-500 shadow-[0_0_5px_#22C55E]' : 'bg-red-500'}`}></div>
-                <span className="text-[7px] text-white/50 uppercase font-black">{dbSynced ? 'MONGODB ONLINE' : 'OFFLINE'}</span>
+                <span className="text-[7px] text-white/50 uppercase font-black">{dbSynced ? 'MONGODB & MIDTRANS ONLINE' : 'OFFLINE'}</span>
               </div>
             </div>
           </div>
@@ -701,7 +761,7 @@ const App: React.FC = () => {
       {screen === 'DASHBOARD' && (
         <div className="px-6 pt-24 pb-32 space-y-6 animate-in fade-in duration-500">
           
-          {/* BANNER PROMOSI WIDESCREEN (TAKAPEDIA STYLE) */}
+          {/* BANNER PROMOSI WIDESCREEN */}
           <div className="relative w-full rounded-2xl overflow-hidden glass border border-[#00FFFF]/30 shadow-xl bg-gradient-to-r from-[#1A0B3B] via-[#0B011E] to-[#1A0B3B] min-h-[220px] flex items-center">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,229,255,0.15)_0%,transparent_75%)] pointer-events-none"></div>
             
@@ -969,8 +1029,14 @@ const App: React.FC = () => {
             <p className="text-2xl font-black italic text-[#00FFFF]">Rp {pending.finalPrice?.toLocaleString() ?? pending.price?.toLocaleString() ?? 0}</p>
           </GlassCard>
 
+          {isProcessingPayment && (
+            <div className="p-4 glass border border-[#00FFFF]/40 rounded-2xl text-center text-xs font-black uppercase text-[#00FFFF] animate-pulse">
+              Menghubungkan ke Payment Gateway Midtrans...
+            </div>
+          )}
+
           <div className="space-y-3">
-            {PAYMENT_METHODS.map(m => (
+            {PAYMENT_METHODS.filter(m => !(pending.type === 'BALANCE' && m.id === 'WALLET')).map(m => (
               <GlassCard key={m.id} onClick={() => handleInitiatePayment(m.id)} className="flex items-center gap-4 border-white/5" hoverEffect>
                 <div className="text-[#00FFFF] p-2 bg-white/5 rounded-lg">{m.icon}</div>
                 <div className="flex-1 text-left">
@@ -981,30 +1047,6 @@ const App: React.FC = () => {
               </GlassCard>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* MODAL QRIS & VA */}
-      {showPaymentModal && pending && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[600] p-6">
-          <GlassCard className="w-full max-w-sm border-[#00FFFF]/40 p-6 space-y-5 text-center">
-            <h3 className="text-lg font-black italic uppercase text-[#00FFFF]">Selesaikan Pembayaran</h3>
-            <p className="text-xs text-white/60 font-semibold">Metode: QRIS / Virtual Account</p>
-
-            <div className="p-4 bg-white rounded-2xl inline-block shadow-2xl">
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=FLYNNNSTORE_${pending.finalPrice}`} className="w-44 h-44 mx-auto" />
-              <p className="text-black text-[9px] font-bold mt-2">Scan dengan DANA, GoPay, OVO, / Mobile Banking</p>
-            </div>
-
-            <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-[10px] font-bold text-yellow-400">
-              Batas Waktu Bayar: <span className="font-black text-white">14:59 Menit</span>
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={handleConfirmPayment} className="flex-1 bg-[#00FFFF] text-black py-3 rounded-xl font-black text-xs uppercase shadow-[0_0_15px_#00FFFF66]">Saya Sudah Bayar</button>
-              <button onClick={() => setShowPaymentModal(false)} className="px-4 glass text-white/40 text-xs rounded-xl font-bold">Batal</button>
-            </div>
-          </GlassCard>
         </div>
       )}
 
@@ -1028,6 +1070,7 @@ const App: React.FC = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-black text-xs uppercase text-[#00FFFF]">{tx.game}</h4>
+                        {tx.orderId && <p className="text-[8px] text-white/50 font-mono">{tx.orderId}</p>}
                         <p className="text-[9px] text-white/70 font-bold">ID / User: {tx.userIdGame} (Server: {tx.zoneId})</p>
                         <p className="text-[8px] text-white/40">{new Date(tx.createdAt).toLocaleString()}</p>
                       </div>
@@ -1063,12 +1106,15 @@ const App: React.FC = () => {
       {/* RIWAYAT TRANSAKSI CUSTOMER */}
       {screen === 'HISTORY' && (
         <div className="px-6 pt-24 pb-32 space-y-6 animate-in fade-in">
-          <h2 className="text-xl font-black italic uppercase tracking-tighter">Riwayat Transaksi Saya</h2>
-          {allDbTransactions.length === 0 ? (
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-black italic uppercase tracking-tighter">Riwayat Transaksi Saya</h2>
+            <button onClick={fetchDatabaseTransactions} className="glass p-2 rounded-xl text-white/60"><RefreshCw size={16} /></button>
+          </div>
+          {myTransactions.length === 0 ? (
             <div className="py-20 text-center text-white/20 uppercase font-black tracking-[0.3em] text-xs">BELUM ADA RIWAYAT TRANSAKSI</div>
           ) : (
             <div className="space-y-3">
-              {allDbTransactions.map((tx: any) => (
+              {myTransactions.map((tx: any) => (
                 <GlassCard key={tx._id} className="flex items-center gap-4 border-white/5">
                   <div className="w-12 h-12 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-[#00FFFF] font-black text-xs uppercase">
                     {tx.game ? tx.game.slice(0, 3) : 'TOP'}
@@ -1078,9 +1124,17 @@ const App: React.FC = () => {
                     <p className="text-[7px] text-white/40 font-bold uppercase tracking-widest">{new Date(tx.createdAt).toLocaleDateString()} | {tx.userIdGame}</p>
                     <p className="text-[7px] text-[#00FFFF] font-bold uppercase">{tx.metodePembayaran}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right space-y-1">
                     <p className="text-[#00FFFF] font-black text-xs tracking-tighter">Rp {tx.harga?.toLocaleString()}</p>
-                    <span className={`text-[7px] font-black uppercase tracking-[0.2em] ${tx.status === 'Success' ? 'text-green-400' : 'text-yellow-400'}`}>{tx.status}</span>
+                    <span className={`block text-[7px] font-black uppercase tracking-[0.2em] ${tx.status === 'Success' ? 'text-green-400' : 'text-yellow-400'}`}>{tx.status}</span>
+                    {tx.status === 'Pending' && tx.snapToken && tx.orderId && (
+                      <button
+                        onClick={() => openMidtransSnap(tx.snapToken, tx.orderId, tx.game === 'Isi Saldo Galaksi', tx.harga)}
+                        className="bg-[#00FFFF] text-black px-2.5 py-1 rounded-lg text-[8px] font-black uppercase"
+                      >
+                        Bayar Sekarang
+                      </button>
+                    )}
                   </div>
                 </GlassCard>
               ))}
