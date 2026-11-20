@@ -518,29 +518,28 @@ const App: React.FC = () => {
       return;
     }
 
-    const registeredUsers = JSON.parse(localStorage.getItem('flynnn_registered_users') || '{}');
-
-    if (authMode === 'REGISTER' && registeredUsers[username]) {
-      alert(`Username "${username}" sudah terdaftar! Silakan gunakan menu Masuk Akun.`);
-      return;
-    }
-
-    if (authMode === 'LOGIN') {
-      if (!registeredUsers[username]) {
-        alert(`Username "${username}" belum terdaftar! Silakan daftar terlebih dahulu.`);
-        return;
-      }
-      if (registeredUsers[username].password !== password) {
-        alert('Password salah! Periksa kembali password kamu.');
-        return;
-      }
-    }
-
     try {
+      let targetPhone = phone;
+
+      if (authMode === 'LOGIN') {
+        const checkRes = await fetch(`${API_BASE}/api/auth/login-check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const checkData = await checkRes.json();
+
+        if (!checkRes.ok || !checkData.success) {
+          alert(checkData.message || 'Gagal memeriksa akun.');
+          return;
+        }
+        targetPhone = checkData.user?.phone || phone || '081234567890';
+      }
+
       const res = await fetch(`${API_BASE}/api/auth/send-whatsapp-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone || registeredUsers[username]?.phone || '081234567890' })
+        body: JSON.stringify({ phone: targetPhone })
       });
 
       const data = await res.json();
@@ -553,10 +552,7 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error('Error OTP:', err);
-      const fallbackOtp = '1234';
-      setServerOtp(fallbackOtp);
-      setIsOtpStep(true);
-      alert(`[SIMULASI OFFLINE OTP]\nKode OTP Anda: ${fallbackOtp}`);
+      alert('Gagal terhubung ke server. Pastikan server backend aktif.');
     }
   };
 
@@ -569,52 +565,69 @@ const App: React.FC = () => {
     const username = authInputName.trim().toUpperCase();
     const password = authInputPassword.trim();
     const phone = authInputPhone.trim();
-    const registeredUsers = JSON.parse(localStorage.getItem('flynnn_registered_users') || '{}');
 
-    if (authMode === 'REGISTER') {
-      const newUser = {
-        username,
-        password,
-        phone,
-        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${username}`,
-        status: 'Verified Security User',
-        role: 'USER',
-        level: 1,
-        balance: 0
-      };
-      registeredUsers[username] = newUser;
-      localStorage.setItem('flynnn_registered_users', JSON.stringify(registeredUsers));
+    try {
+      if (authMode === 'REGISTER') {
+        const regRes = await fetch(`${API_BASE}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, phone })
+        });
+        const regData = await regRes.json();
 
-      await db.updateUserProfile(newUser);
-      setUser(newUser);
-      setBalance(0);
-      saveActiveSession(newUser);
+        if (!regRes.ok || !regData.success) {
+          alert(regData.message || 'Gagal menyimpan akun baru ke database.');
+          return;
+        }
 
-      setShowAuthModal(false);
-      setIsOtpStep(false);
-      setInputOtp('');
-      setAuthInputName('');
-      setAuthInputPassword('');
-      setAuthInputPhone('');
-      setScreen('DASHBOARD');
-      alert(`Pendaftaran Berhasil & Terverifikasi WhatsApp OTP! Selamat Datang, ${username}.`);
-    } else {
-      const existingUser = registeredUsers[username];
-      await db.updateUserProfile(existingUser);
-      setUser(existingUser);
-      setBalance(existingUser.balance || 0);
-      saveActiveSession(existingUser);
+        const newUser = regData.user;
+        await db.updateUserProfile(newUser);
+        setUser(newUser);
+        setBalance(newUser.balance || 0);
+        saveActiveSession(newUser);
 
-      setShowAuthModal(false);
-      setIsOtpStep(false);
-      setInputOtp('');
-      setAuthInputName('');
-      setAuthInputPassword('');
-      setAuthInputPhone('');
-      setScreen('DASHBOARD');
-      alert(`Login Berhasil & Terverifikasi WhatsApp OTP! Selamat Datang Kembali, ${username}.`);
+        setShowAuthModal(false);
+        setIsOtpStep(false);
+        setInputOtp('');
+        setAuthInputName('');
+        setAuthInputPassword('');
+        setAuthInputPhone('');
+        setScreen('DASHBOARD');
+        await fetchDatabaseTransactions(username, 'USER');
+        alert(`Pendaftaran Berhasil & Tersimpan di Database! Selamat Datang, ${username}.`);
+      } else {
+        const loginRes = await fetch(`${API_BASE}/api/auth/login-check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const loginData = await loginRes.json();
+
+        if (!loginRes.ok || !loginData.success) {
+          alert(loginData.message || 'Gagal memuat data akun.');
+          return;
+        }
+
+        const existingUser = loginData.user;
+        await db.updateUserProfile(existingUser);
+        setUser(existingUser);
+        setBalance(existingUser.balance || 0);
+        saveActiveSession(existingUser);
+
+        setShowAuthModal(false);
+        setIsOtpStep(false);
+        setInputOtp('');
+        setAuthInputName('');
+        setAuthInputPassword('');
+        setAuthInputPhone('');
+        setScreen('DASHBOARD');
+        await fetchDatabaseTransactions(username, 'USER');
+        alert(`Login Berhasil & Terverifikasi WhatsApp OTP! Selamat Datang Kembali, ${username}.`);
+      }
+    } catch (err) {
+      console.error('Error verifikasi akun:', err);
+      alert('Terjadi kesalahan saat menyimpan/memuat akun dari server.');
     }
-    await fetchDatabaseTransactions(username, 'USER');
   };
 
   const handleGoogleLogin = async () => {

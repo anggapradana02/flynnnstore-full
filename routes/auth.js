@@ -1,6 +1,101 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const User = require('../models/User');
+
+const formatUserResponse = (u) => ({
+    username: u.username,
+    phone: u.phone || '',
+    email: u.email || '',
+    role: u.role || 'USER',
+    level: u.level || 1,
+    balance: typeof u.balance === 'number' ? u.balance : (u.saldo || 0),
+    status: 'Verified Security User',
+    avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${u.username}`
+});
+
+// POST: Cek kredensial saat LOGIN sebelum kirim OTP
+router.post('/login-check', async (req, res, next) => {
+    try {
+        const { username, password } = req.body || {};
+        const cleanUsername = String(username || '').trim().toUpperCase();
+        const cleanPassword = String(password || '').trim();
+
+        if (!cleanUsername || !cleanPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username dan Password wajib diisi!'
+            });
+        }
+
+        const foundUser = await User.findOne({ username: cleanUsername });
+        if (!foundUser) {
+            return res.status(404).json({
+                success: false,
+                message: `Username "${cleanUsername}" belum terdaftar! Silakan daftar terlebih dahulu.`
+            });
+        }
+
+        if (foundUser.password !== cleanPassword) {
+            return res.status(401).json({
+                success: false,
+                message: 'Password salah! Periksa kembali password kamu.'
+            });
+        }
+
+        res.json({
+            success: true,
+            user: formatUserResponse(foundUser)
+        });
+    } catch (err) {
+        next(err);
+    }
+});
+
+// POST: Daftarkan akun baru ke MongoDB Atlas setelah OTP valid
+router.post('/register', async (req, res, next) => {
+    try {
+        const { username, password, phone, email } = req.body || {};
+        const cleanUsername = String(username || '').trim().toUpperCase();
+        const cleanPassword = String(password || '').trim();
+        const cleanPhone = String(phone || '').trim();
+        const cleanEmail = String(email || '').trim();
+
+        if (!cleanUsername || !cleanPassword || !cleanPhone) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username, Password, dan Nomor WhatsApp wajib diisi!'
+            });
+        }
+
+        const existing = await User.findOne({ username: cleanUsername });
+        if (existing) {
+            return res.status(409).json({
+                success: false,
+                message: `Username "${cleanUsername}" sudah terdaftar! Silakan gunakan menu Masuk Akun.`
+            });
+        }
+
+        const created = await User.create({
+            username: cleanUsername,
+            password: cleanPassword,
+            phone: cleanPhone,
+            email: cleanEmail,
+            role: 'USER',
+            level: 1,
+            balance: 0,
+            saldo: 0
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Akun berhasil didaftarkan ke database!',
+            user: formatUserResponse(created)
+        });
+    } catch (err) {
+        next(err);
+    }
+});
 
 /**
  * @swagger
@@ -29,11 +124,11 @@ const axios = require('axios');
 router.post('/send-whatsapp-otp', async (req, res, next) => {
     try {
         const { phone } = req.body;
-        
+
         if (!phone) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Nomor WhatsApp wajib diisi untuk verifikasi OTP!' 
+            return res.status(400).json({
+                success: false,
+                message: 'Nomor WhatsApp wajib diisi untuk verifikasi OTP!'
             });
         }
 
@@ -45,29 +140,24 @@ router.post('/send-whatsapp-otp', async (req, res, next) => {
             });
         }
 
-        // Format nomor HP ke standar internasional berawalan 62 jika diawali 0
         if (cleanPhone.startsWith('0')) {
             cleanPhone = '62' + cleanPhone.slice(1);
         }
 
-        // Generate 4 digit kode OTP acak
         const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
-
-        // Mengambil Token Fonnte dari Environment Variables Render
         const tokenFonnte = process.env.FONNTE_TOKEN;
 
         if (!tokenFonnte) {
             console.log('[WARNING] FONNTE_TOKEN belum diatur di Environment Variables Render!');
         } else {
             try {
-                // Kirim pesan WhatsApp asli secara real-time via Fonnte Gateway
                 await axios.post('https://api.fonnte.com/send', {
                     target: cleanPhone,
                     message: `*FLYNNNSTORE - VERIFIKASI OTP*\n\nKode verifikasi OTP Anda adalah: *${otpCode}*\n\nJangan berikan kode ini kepada siapa pun termasuk pihak Flynnnstore. Terima kasih, Angga Tampan!`,
                     countryCode: '62'
                 }, {
-                    headers: { 
-                        Authorization: tokenFonnte 
+                    headers: {
+                        Authorization: tokenFonnte
                     }
                 });
                 console.log(`[FONNTE SUCCESS] OTP ${otpCode} berhasil dikirim ke nomor ${cleanPhone}`);
@@ -76,11 +166,10 @@ router.post('/send-whatsapp-otp', async (req, res, next) => {
             }
         }
 
-        // Mengirimkan response sukses beserta kode OTP ke frontend (sangat berguna untuk cadangan saat sidang)
-        res.json({ 
-            success: true, 
-            message: 'Kode OTP berhasil dikirim ke nomor WhatsApp!', 
-            otp: otpCode 
+        res.json({
+            success: true,
+            message: 'Kode OTP berhasil dikirim ke nomor WhatsApp!',
+            otp: otpCode
         });
     } catch (err) {
         next(err);
