@@ -1,0 +1,1421 @@
+{
+  "version": 1,
+  "note": "Isi operator_id dan product_code hanya setelah verifikasi manual. Kandidat berasal dari data/apigames-products.json; kandidat tunggal pun belum otomatis dipilih.",
+  "entries": [
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-1",
+      "nominal": "3 Diamonds",
+      "web_retail_price": 1500,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 35,
+          "product_code": "DGRMBL28",
+          "product_name": "28 (25+3) Diamond Mobile Legend DGR",
+          "harga_unit": 10091,
+          "harga_rupiah": 2603478
+        },
+        {
+          "operator_id": 35,
+          "product_code": "DGRMBL3",
+          "product_name": "3 Diamond Mobile Legend DGR",
+          "harga_unit": 1300,
+          "harga_rupiah": 335400
+        },
+        {
+          "operator_id": 121,
+          "product_code": "KCIDMBL36",
+          "product_name": "36 (33 + 3) Diamonds Mobile Legend KCID",
+          "harga_unit": 9100,
+          "harga_rupiah": 2347800
+        }
+      ]
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-2",
+      "nominal": "19 Diamonds",
+      "web_retail_price": 6000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 9,
+          "product_code": "UPMBL19",
+          "product_name": "19 Diamond Mobile Legend Unipin",
+          "harga_unit": 6600,
+          "harga_rupiah": 1702800
+        },
+        {
+          "operator_id": 38,
+          "product_code": "UPHMBL22",
+          "product_name": "19 Diamonds (17+ 2) Mobile Legend Unipin PH",
+          "harga_unit": 20,
+          "harga_rupiah": 5160
+        },
+        {
+          "operator_id": 129,
+          "product_code": "GPMBLID19",
+          "product_name": "19 Diamonds (17 + 2) Mobile Legend GP ID",
+          "harga_unit": 1.76,
+          "harga_rupiah": 454
+        },
+        {
+          "operator_id": 132,
+          "product_code": "DGHMBL19",
+          "product_name": "19 Diamonds Mobile Legend DGHOST",
+          "harga_unit": 6116,
+          "harga_rupiah": 1577928
+        }
+      ]
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-3",
+      "nominal": "36 Diamonds",
+      "web_retail_price": 10000,
+      "mapping_status": "unique_candidate_requires_manual_approval",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 9,
+          "product_code": "UPMBL36",
+          "product_name": "36 Diamond Mobile Legend Unipin",
+          "harga_unit": 12000,
+          "harga_rupiah": 3096000
+        }
+      ]
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-4",
+      "nominal": "86 Diamonds",
+      "web_retail_price": 22000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 2,
+          "product_code": "ML86",
+          "product_name": "86 Diamond Mobile Legend",
+          "harga_unit": 61.5,
+          "harga_rupiah": 15867
+        },
+        {
+          "operator_id": 16,
+          "product_code": "GPMBL86",
+          "product_name": "86 Diamond Mobile Legend Global GP",
+          "harga_unit": 7.73,
+          "harga_rupiah": 1994
+        },
+        {
+          "operator_id": 21,
+          "product_code": "UBRMBL86",
+          "product_name": "86 Diamond Mobile Legend Unipin BR",
+          "harga_unit": 7.9,
+          "harga_rupiah": 2038
+        }
+      ]
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-5",
+      "nominal": "172 Diamonds",
+      "web_retail_price": 44000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 2,
+          "product_code": "ML172",
+          "product_name": "172 Diamond Mobile Legend",
+          "harga_unit": 122,
+          "harga_rupiah": 31476
+        },
+        {
+          "operator_id": 16,
+          "product_code": "GPMBL172",
+          "product_name": "172 Diamond Mobile Legend Global GP",
+          "harga_unit": 15.46,
+          "harga_rupiah": 3989
+        },
+        {
+          "operator_id": 21,
+          "product_code": "UBRMBL172",
+          "product_name": "172 Diamond Mobile Legend Unipin BR",
+          "harga_unit": 15.8,
+          "harga_rupiah": 4076
+        }
+      ]
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-6",
+      "nominal": "257 Diamonds",
+      "web_retail_price": 65000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 2,
+          "product_code": "ML257",
+          "product_name": "257 Diamond Mobile Legend",
+          "harga_unit": 177.5,
+          "harga_rupiah": 45795
+        },
+        {
+          "operator_id": 16,
+          "product_code": "GPMBL257",
+          "product_name": "257 Diamond Mobile Legend Global GP",
+          "harga_unit": 23.09,
+          "harga_rupiah": 5957
+        },
+        {
+          "operator_id": 21,
+          "product_code": "UBRMBL257",
+          "product_name": "257 Diamond Mobile Legend Unipin BR",
+          "harga_unit": 23.7,
+          "harga_rupiah": 6115
+        }
+      ]
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-7",
+      "nominal": "344 Diamonds",
+      "web_retail_price": 88000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 2,
+          "product_code": "ML344",
+          "product_name": "344 Diamond Mobile Legend",
+          "harga_unit": 244,
+          "harga_rupiah": 62952
+        },
+        {
+          "operator_id": 16,
+          "product_code": "GPMBL344",
+          "product_name": "344 Diamond Mobile Legend Global GP",
+          "harga_unit": 30.92,
+          "harga_rupiah": 7977
+        },
+        {
+          "operator_id": 21,
+          "product_code": "UBRMBL344",
+          "product_name": "344 Diamond Mobile Legend Unipin BR",
+          "harga_unit": 31.6,
+          "harga_rupiah": 8153
+        }
+      ]
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-8",
+      "nominal": "514 Diamonds",
+      "web_retail_price": 130000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 2,
+          "product_code": "ML514",
+          "product_name": "514 Diamond Mobile Legend",
+          "harga_unit": 355,
+          "harga_rupiah": 91590
+        },
+        {
+          "operator_id": 16,
+          "product_code": "GPMBL514",
+          "product_name": "514 Diamond Mobile Legend Global GP",
+          "harga_unit": 46.18,
+          "harga_rupiah": 11914
+        },
+        {
+          "operator_id": 21,
+          "product_code": "UBRMBL514",
+          "product_name": "514 Diamond Mobile Legend Unipin BR",
+          "harga_unit": 47.4,
+          "harga_rupiah": 12229
+        }
+      ]
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-9",
+      "nominal": "706 Diamonds",
+      "web_retail_price": 175000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 2,
+          "product_code": "ML706",
+          "product_name": "706 Diamond Mobile Legend",
+          "harga_unit": 480,
+          "harga_rupiah": 123840
+        },
+        {
+          "operator_id": 16,
+          "product_code": "GPMBL706",
+          "product_name": "706 Diamond Mobile Legend Global GP",
+          "harga_unit": 61.83,
+          "harga_rupiah": 15952
+        },
+        {
+          "operator_id": 21,
+          "product_code": "UBRMBL706",
+          "product_name": "706 Diamond Mobile Legend Unipin BR",
+          "harga_unit": 63.2,
+          "harga_rupiah": 16306
+        }
+      ]
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-10",
+      "nominal": "963 Diamonds",
+      "web_retail_price": 240000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 2,
+          "product_code": "ML963",
+          "product_name": "963 Diamond Mobile Legend",
+          "harga_unit": 657.5,
+          "harga_rupiah": 169635
+        },
+        {
+          "operator_id": 16,
+          "product_code": "GPMBL963",
+          "product_name": "963 Diamond Mobile Legend Global GP",
+          "harga_unit": 84.92,
+          "harga_rupiah": 21909
+        },
+        {
+          "operator_id": 21,
+          "product_code": "UBRMBL963",
+          "product_name": "963 Diamond Mobile Legend Unipin BR",
+          "harga_unit": 86.9,
+          "harga_rupiah": 22420
+        }
+      ]
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-11",
+      "nominal": "1412 Diamonds",
+      "web_retail_price": 350000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 2,
+          "product_code": "ML1412",
+          "product_name": "1412 Diamond Mobile Legend",
+          "harga_unit": 960,
+          "harga_rupiah": 247680
+        },
+        {
+          "operator_id": 16,
+          "product_code": "GPMBL1412",
+          "product_name": "1412 Diamond Mobile Legend Global GP",
+          "harga_unit": 123.66,
+          "harga_rupiah": 31904
+        },
+        {
+          "operator_id": 21,
+          "product_code": "UBRMBL1412",
+          "product_name": "1412 Diamond Mobile Legend Unipin BR",
+          "harga_unit": 126.4,
+          "harga_rupiah": 32611
+        }
+      ]
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-12",
+      "nominal": "Weekly Diamond Pass",
+      "web_retail_price": 28000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "mlbb",
+      "game_name": "Mobile Legends",
+      "nominal_id": "ml-13",
+      "nominal": "Twilight Pass",
+      "web_retail_price": 150000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 16,
+          "product_code": "GPMBLTP",
+          "product_name": "Twilight Pass Mobile Legend Global",
+          "harga_unit": 50.81,
+          "harga_rupiah": 13109
+        },
+        {
+          "operator_id": 22,
+          "product_code": "UPMYMBLTP",
+          "product_name": "Twilight Pass Mobile Legend Unipin MY",
+          "harga_unit": 42.4,
+          "harga_rupiah": 10939
+        },
+        {
+          "operator_id": 38,
+          "product_code": "UPHMBLTP",
+          "product_name": "Twilight Pass Mobile Legend Unipin PH",
+          "harga_unit": 500,
+          "harga_rupiah": 129000
+        },
+        {
+          "operator_id": 129,
+          "product_code": "GPMBLIDTP",
+          "product_name": "Twilight Pass Mobile Legend GP ID",
+          "harga_unit": 47.87,
+          "harga_rupiah": 12350
+        }
+      ]
+    },
+    {
+      "game_id": "pb",
+      "game_name": "Point Blank",
+      "nominal_id": "pb-1",
+      "nominal": "1.200 Cash",
+      "web_retail_price": 10000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pb",
+      "game_name": "Point Blank",
+      "nominal_id": "pb-2",
+      "nominal": "2.400 Cash",
+      "web_retail_price": 20000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pb",
+      "game_name": "Point Blank",
+      "nominal_id": "pb-3",
+      "nominal": "6.000 Cash",
+      "web_retail_price": 50000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pb",
+      "game_name": "Point Blank",
+      "nominal_id": "pb-4",
+      "nominal": "12.000 Cash",
+      "web_retail_price": 100000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pb",
+      "game_name": "Point Blank",
+      "nominal_id": "pb-5",
+      "nominal": "24.000 Cash",
+      "web_retail_price": 200000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pb",
+      "game_name": "Point Blank",
+      "nominal_id": "pb-6",
+      "nominal": "36.000 Cash",
+      "web_retail_price": 300000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pb",
+      "game_name": "Point Blank",
+      "nominal_id": "pb-7",
+      "nominal": "60.000 Cash",
+      "web_retail_price": 500000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "ff",
+      "game_name": "Free Fire",
+      "nominal_id": "ff-1",
+      "nominal": "5 Diamonds",
+      "web_retail_price": 1000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 1,
+          "product_code": "FF5",
+          "product_name": "5 Diamond Free Fire",
+          "harga_unit": 3,
+          "harga_rupiah": 774
+        },
+        {
+          "operator_id": 1,
+          "product_code": "FF925",
+          "product_name": "925 + 5 Diamond Free Fire",
+          "harga_unit": 429,
+          "harga_rupiah": 110682
+        },
+        {
+          "operator_id": 11,
+          "product_code": "UPF5",
+          "product_name": "5 Diamond Free Fire Unipin",
+          "harga_unit": 1000,
+          "harga_rupiah": 258000
+        },
+        {
+          "operator_id": 36,
+          "product_code": "DGRF5",
+          "product_name": "5 Diamond Free Fire DGR",
+          "harga_unit": 1261,
+          "harga_rupiah": 325338
+        },
+        {
+          "operator_id": 122,
+          "product_code": "DGHF5",
+          "product_name": "5 Diamonds Free Fire DGH",
+          "harga_unit": 983,
+          "harga_rupiah": 253614
+        }
+      ]
+    },
+    {
+      "game_id": "ff",
+      "game_name": "Free Fire",
+      "nominal_id": "ff-2",
+      "nominal": "50 Diamonds",
+      "web_retail_price": 8000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 1,
+          "product_code": "FF50",
+          "product_name": "50 Diamond Free Fire",
+          "harga_unit": 24,
+          "harga_rupiah": 6192
+        },
+        {
+          "operator_id": 11,
+          "product_code": "UPF50",
+          "product_name": "50 Diamond Free Fire Unipin",
+          "harga_unit": 8000,
+          "harga_rupiah": 2064000
+        },
+        {
+          "operator_id": 36,
+          "product_code": "DGRF50",
+          "product_name": "50 Diamond Free Fire DGR",
+          "harga_unit": 10091,
+          "harga_rupiah": 2603478
+        },
+        {
+          "operator_id": 122,
+          "product_code": "DGHF50",
+          "product_name": "50 Diamonds Free Fire DGHF",
+          "harga_unit": 7865,
+          "harga_rupiah": 2029170
+        }
+      ]
+    },
+    {
+      "game_id": "ff",
+      "game_name": "Free Fire",
+      "nominal_id": "ff-3",
+      "nominal": "140 Diamonds",
+      "web_retail_price": 20000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 1,
+          "product_code": "FF140",
+          "product_name": "140 Diamond Free Fire",
+          "harga_unit": 66,
+          "harga_rupiah": 17028
+        },
+        {
+          "operator_id": 11,
+          "product_code": "UPF140",
+          "product_name": "140 Diamond Free Fire Unipin",
+          "harga_unit": 20000,
+          "harga_rupiah": 5160000
+        },
+        {
+          "operator_id": 36,
+          "product_code": "DGRF140",
+          "product_name": "140 Diamond Free Fire DGR",
+          "harga_unit": 25227,
+          "harga_rupiah": 6508566
+        },
+        {
+          "operator_id": 122,
+          "product_code": "DGHF140",
+          "product_name": "140 Diamonds Free Fire DGH",
+          "harga_unit": 19663,
+          "harga_rupiah": 5073054
+        }
+      ]
+    },
+    {
+      "game_id": "ff",
+      "game_name": "Free Fire",
+      "nominal_id": "ff-4",
+      "nominal": "355 Diamonds",
+      "web_retail_price": 50000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 1,
+          "product_code": "FF355",
+          "product_name": "355 Diamond Free Fire",
+          "harga_unit": 165,
+          "harga_rupiah": 42570
+        },
+        {
+          "operator_id": 11,
+          "product_code": "UPF355",
+          "product_name": "355 Diamond Free Fire Unipin",
+          "harga_unit": 50000,
+          "harga_rupiah": 12900000
+        },
+        {
+          "operator_id": 36,
+          "product_code": "DGRF355",
+          "product_name": "355 Diamond Free Fire DGR",
+          "harga_unit": 63068,
+          "harga_rupiah": 16271544
+        },
+        {
+          "operator_id": 122,
+          "product_code": "DGHF355",
+          "product_name": "355 Diamonds Free Fire DGH",
+          "harga_unit": 49159,
+          "harga_rupiah": 12683022
+        }
+      ]
+    },
+    {
+      "game_id": "ff",
+      "game_name": "Free Fire",
+      "nominal_id": "ff-5",
+      "nominal": "720 Diamonds",
+      "web_retail_price": 100000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 1,
+          "product_code": "FF720",
+          "product_name": "720 Diamond Free Fire",
+          "harga_unit": 330,
+          "harga_rupiah": 85140
+        },
+        {
+          "operator_id": 11,
+          "product_code": "UPF720",
+          "product_name": "720 Diamond Free Fire Unipin",
+          "harga_unit": 100000,
+          "harga_rupiah": 25800000
+        },
+        {
+          "operator_id": 36,
+          "product_code": "DGRF720",
+          "product_name": "720 Diamond Free Fire DGR",
+          "harga_unit": 126136,
+          "harga_rupiah": 32543088
+        },
+        {
+          "operator_id": 122,
+          "product_code": "DGHF720",
+          "product_name": "720 Diamonds Free Fire DGH",
+          "harga_unit": 98317,
+          "harga_rupiah": 25365786
+        }
+      ]
+    },
+    {
+      "game_id": "ff",
+      "game_name": "Free Fire",
+      "nominal_id": "ff-6",
+      "nominal": "1450 Diamonds",
+      "web_retail_price": 200000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 1,
+          "product_code": "FF1450",
+          "product_name": "1450 Diamond Free Fire",
+          "harga_unit": 666,
+          "harga_rupiah": 171828
+        },
+        {
+          "operator_id": 11,
+          "product_code": "UPF1450",
+          "product_name": "1450 Diamond Free Fire Unipin",
+          "harga_unit": 200000,
+          "harga_rupiah": 51600000
+        },
+        {
+          "operator_id": 36,
+          "product_code": "DGRF1450",
+          "product_name": "1450 Diamond Free Fire DGR",
+          "harga_unit": 252273,
+          "harga_rupiah": 65086434
+        },
+        {
+          "operator_id": 122,
+          "product_code": "DGHF1450",
+          "product_name": "1450 Diamonds Free Fire DGH",
+          "harga_unit": 196635,
+          "harga_rupiah": 50731830
+        }
+      ]
+    },
+    {
+      "game_id": "ff",
+      "game_name": "Free Fire",
+      "nominal_id": "ff-7",
+      "nominal": "3640 Diamonds",
+      "web_retail_price": 500000,
+      "mapping_status": "ambiguous_requires_manual_selection",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 1,
+          "product_code": "FF3640",
+          "product_name": "3640 Diamond Free Fire",
+          "harga_unit": 1674,
+          "harga_rupiah": 431892
+        },
+        {
+          "operator_id": 11,
+          "product_code": "UPF3640",
+          "product_name": "3640 Diamond Free Fire Unipin",
+          "harga_unit": 500000,
+          "harga_rupiah": 129000000
+        },
+        {
+          "operator_id": 122,
+          "product_code": "DGHF3640",
+          "product_name": "3640 Diamonds Free Fire DGH",
+          "harga_unit": 491587,
+          "harga_rupiah": 126829446
+        }
+      ]
+    },
+    {
+      "game_id": "ff",
+      "game_name": "Free Fire",
+      "nominal_id": "ff-8",
+      "nominal": "Membership Mingguan",
+      "web_retail_price": 30000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "ff",
+      "game_name": "Free Fire",
+      "nominal_id": "ff-9",
+      "nominal": "Membership Bulanan",
+      "web_retail_price": 115000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pubg",
+      "game_name": "PUBG Mobile",
+      "nominal_id": "pubg-1",
+      "nominal": "60 UC",
+      "web_retail_price": 15000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pubg",
+      "game_name": "PUBG Mobile",
+      "nominal_id": "pubg-2",
+      "nominal": "325 UC",
+      "web_retail_price": 75000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pubg",
+      "game_name": "PUBG Mobile",
+      "nominal_id": "pubg-3",
+      "nominal": "660 UC",
+      "web_retail_price": 150000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pubg",
+      "game_name": "PUBG Mobile",
+      "nominal_id": "pubg-4",
+      "nominal": "1800 UC",
+      "web_retail_price": 400000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pubg",
+      "game_name": "PUBG Mobile",
+      "nominal_id": "pubg-5",
+      "nominal": "3850 UC",
+      "web_retail_price": 750000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pubg",
+      "game_name": "PUBG Mobile",
+      "nominal_id": "pubg-6",
+      "nominal": "8100 UC",
+      "web_retail_price": 1500000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pubg",
+      "game_name": "PUBG Mobile",
+      "nominal_id": "pubg-7",
+      "nominal": "Royale Pass Elite",
+      "web_retail_price": 150000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "pubg",
+      "game_name": "PUBG Mobile",
+      "nominal_id": "pubg-8",
+      "nominal": "Royale Pass Plus",
+      "web_retail_price": 380000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "valo",
+      "game_name": "Valorant",
+      "nominal_id": "val-1",
+      "nominal": "125 VP",
+      "web_retail_price": 15000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "valo",
+      "game_name": "Valorant",
+      "nominal_id": "val-2",
+      "nominal": "425 VP",
+      "web_retail_price": 50000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "valo",
+      "game_name": "Valorant",
+      "nominal_id": "val-3",
+      "nominal": "475 VP",
+      "web_retail_price": 55000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "valo",
+      "game_name": "Valorant",
+      "nominal_id": "val-4",
+      "nominal": "1000 VP",
+      "web_retail_price": 110000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "valo",
+      "game_name": "Valorant",
+      "nominal_id": "val-5",
+      "nominal": "2050 VP",
+      "web_retail_price": 220000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "valo",
+      "game_name": "Valorant",
+      "nominal_id": "val-6",
+      "nominal": "3650 VP",
+      "web_retail_price": 385000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "valo",
+      "game_name": "Valorant",
+      "nominal_id": "val-7",
+      "nominal": "5350 VP",
+      "web_retail_price": 550000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "valo",
+      "game_name": "Valorant",
+      "nominal_id": "val-8",
+      "nominal": "11000 VP",
+      "web_retail_price": 1100000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "genshin",
+      "game_name": "Genshin Impact",
+      "nominal_id": "gi-1",
+      "nominal": "60 Genesis Crystals",
+      "web_retail_price": 16000,
+      "mapping_status": "unique_candidate_requires_manual_approval",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 19,
+          "product_code": "GPGI60",
+          "product_name": "60 Genesis Crystals Genshin Impact GP",
+          "harga_unit": 3.9,
+          "harga_rupiah": 1006
+        }
+      ]
+    },
+    {
+      "game_id": "genshin",
+      "game_name": "Genshin Impact",
+      "nominal_id": "gi-2",
+      "nominal": "300 Genesis Crystals",
+      "web_retail_price": 79000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "genshin",
+      "game_name": "Genshin Impact",
+      "nominal_id": "gi-3",
+      "nominal": "980 Genesis Crystals",
+      "web_retail_price": 249000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "genshin",
+      "game_name": "Genshin Impact",
+      "nominal_id": "gi-4",
+      "nominal": "1980 Genesis Crystals",
+      "web_retail_price": 479000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "genshin",
+      "game_name": "Genshin Impact",
+      "nominal_id": "gi-5",
+      "nominal": "3280 Genesis Crystals",
+      "web_retail_price": 799000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "genshin",
+      "game_name": "Genshin Impact",
+      "nominal_id": "gi-6",
+      "nominal": "6480 Genesis Crystals",
+      "web_retail_price": 1599000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "genshin",
+      "game_name": "Genshin Impact",
+      "nominal_id": "gi-7",
+      "nominal": "Blessing of Welkin Moon",
+      "web_retail_price": 79000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hsr",
+      "game_name": "Honkai: Star Rail",
+      "nominal_id": "hsr-1",
+      "nominal": "60 Oneiric Shards",
+      "web_retail_price": 16000,
+      "mapping_status": "unique_candidate_requires_manual_approval",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 117,
+          "product_code": "HSRG60",
+          "product_name": "Honkai: Star Rail Gamepoint 60 Oneiric Shard",
+          "harga_unit": 5.08,
+          "harga_rupiah": 1311
+        }
+      ]
+    },
+    {
+      "game_id": "hsr",
+      "game_name": "Honkai: Star Rail",
+      "nominal_id": "hsr-2",
+      "nominal": "300 Oneiric Shards",
+      "web_retail_price": 79000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hsr",
+      "game_name": "Honkai: Star Rail",
+      "nominal_id": "hsr-3",
+      "nominal": "980 Oneiric Shards",
+      "web_retail_price": 249000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hsr",
+      "game_name": "Honkai: Star Rail",
+      "nominal_id": "hsr-4",
+      "nominal": "1980 Oneiric Shards",
+      "web_retail_price": 479000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hsr",
+      "game_name": "Honkai: Star Rail",
+      "nominal_id": "hsr-5",
+      "nominal": "3280 Oneiric Shards",
+      "web_retail_price": 799000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hsr",
+      "game_name": "Honkai: Star Rail",
+      "nominal_id": "hsr-6",
+      "nominal": "6480 Oneiric Shards",
+      "web_retail_price": 1599000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hsr",
+      "game_name": "Honkai: Star Rail",
+      "nominal_id": "hsr-7",
+      "nominal": "Express Supply Pass",
+      "web_retail_price": 79000,
+      "mapping_status": "unique_candidate_requires_manual_approval",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": [
+        {
+          "operator_id": 117,
+          "product_code": "HSRGESP",
+          "product_name": "Honkai: Star Rail Gamepoint Express Supply Pass",
+          "harga_unit": 20.61,
+          "harga_rupiah": 5317
+        }
+      ]
+    },
+    {
+      "game_id": "codm",
+      "game_name": "Call of Duty: Mobile",
+      "nominal_id": "codm-1",
+      "nominal": "31 CP",
+      "web_retail_price": 5000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "codm",
+      "game_name": "Call of Duty: Mobile",
+      "nominal_id": "codm-2",
+      "nominal": "62 CP",
+      "web_retail_price": 10000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "codm",
+      "game_name": "Call of Duty: Mobile",
+      "nominal_id": "codm-3",
+      "nominal": "131 CP",
+      "web_retail_price": 20000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "codm",
+      "game_name": "Call of Duty: Mobile",
+      "nominal_id": "codm-4",
+      "nominal": "321 CP",
+      "web_retail_price": 50000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "codm",
+      "game_name": "Call of Duty: Mobile",
+      "nominal_id": "codm-5",
+      "nominal": "675 CP",
+      "web_retail_price": 100000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "codm",
+      "game_name": "Call of Duty: Mobile",
+      "nominal_id": "codm-6",
+      "nominal": "1410 CP",
+      "web_retail_price": 200000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "codm",
+      "game_name": "Call of Duty: Mobile",
+      "nominal_id": "codm-7",
+      "nominal": "3780 CP",
+      "web_retail_price": 500000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "roblox",
+      "game_name": "Roblox",
+      "nominal_id": "rbx-1",
+      "nominal": "400 Robux",
+      "web_retail_price": 75000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "roblox",
+      "game_name": "Roblox",
+      "nominal_id": "rbx-2",
+      "nominal": "800 Robux",
+      "web_retail_price": 150000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "roblox",
+      "game_name": "Roblox",
+      "nominal_id": "rbx-3",
+      "nominal": "1700 Robux",
+      "web_retail_price": 300000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "roblox",
+      "game_name": "Roblox",
+      "nominal_id": "rbx-4",
+      "nominal": "4500 Robux",
+      "web_retail_price": 750000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "roblox",
+      "game_name": "Roblox",
+      "nominal_id": "rbx-5",
+      "nominal": "10000 Robux",
+      "web_retail_price": 1500000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hok",
+      "game_name": "Honor of Kings",
+      "nominal_id": "hok-1",
+      "nominal": "8 Tokens",
+      "web_retail_price": 2000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hok",
+      "game_name": "Honor of Kings",
+      "nominal_id": "hok-2",
+      "nominal": "80 Tokens",
+      "web_retail_price": 16000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hok",
+      "game_name": "Honor of Kings",
+      "nominal_id": "hok-3",
+      "nominal": "240 Tokens",
+      "web_retail_price": 48000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hok",
+      "game_name": "Honor of Kings",
+      "nominal_id": "hok-4",
+      "nominal": "400 Tokens",
+      "web_retail_price": 80000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hok",
+      "game_name": "Honor of Kings",
+      "nominal_id": "hok-5",
+      "nominal": "800 Tokens",
+      "web_retail_price": 160000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hok",
+      "game_name": "Honor of Kings",
+      "nominal_id": "hok-6",
+      "nominal": "1200 Tokens",
+      "web_retail_price": 240000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "hok",
+      "game_name": "Honor of Kings",
+      "nominal_id": "hok-7",
+      "nominal": "2400 Tokens",
+      "web_retail_price": 480000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "efootball",
+      "game_name": "eFootball 2026",
+      "nominal_id": "ef-1",
+      "nominal": "130 eFootball Coins",
+      "web_retail_price": 16000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "efootball",
+      "game_name": "eFootball 2026",
+      "nominal_id": "ef-2",
+      "nominal": "550 eFootball Coins",
+      "web_retail_price": 65000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "efootball",
+      "game_name": "eFootball 2026",
+      "nominal_id": "ef-3",
+      "nominal": "1040 eFootball Coins",
+      "web_retail_price": 125000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "efootball",
+      "game_name": "eFootball 2026",
+      "nominal_id": "ef-4",
+      "nominal": "2130 eFootball Coins",
+      "web_retail_price": 240000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "efootball",
+      "game_name": "eFootball 2026",
+      "nominal_id": "ef-5",
+      "nominal": "3250 eFootball Coins",
+      "web_retail_price": 360000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    },
+    {
+      "game_id": "efootball",
+      "game_name": "eFootball 2026",
+      "nominal_id": "ef-6",
+      "nominal": "5700 eFootball Coins",
+      "web_retail_price": 600000,
+      "mapping_status": "needs_product_match",
+      "operator_id": null,
+      "product_code": null,
+      "candidates": []
+    }
+  ]
+}

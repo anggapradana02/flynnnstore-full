@@ -405,7 +405,7 @@ const App: React.FC = () => {
 
       setIsProcessingPayment(true);
       try {
-        await fetch(`${API_BASE}/api/transactions`, {
+        const walletRes = await fetch(`${API_BASE}/api/transactions`, {
           method: 'POST',
           headers: getAuthHeaders(true),
           body: JSON.stringify({
@@ -420,6 +420,11 @@ const App: React.FC = () => {
             promoCode
           })
         });
+        const walletData = await walletRes.json();
+        if (!walletRes.ok || !walletData.success) {
+          alert(walletData.message || 'Order Saldo Galaksi belum dapat diproses.');
+          return;
+        }
 
         const newBal = Math.max(0, balance - finalPrice);
         const updatedUser = { ...user, balance: newBal };

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "contractConfirmed": false,
+  "endpoint": {
+    "baseUrl": "",
+    "path": "",
+    "method": ""
+  },
+  "request": {
+    "parameters": [
+      {
+        "source": "merchantId",
+        "required": null,
+        "location": null,
+        "name": null
+      },
+      {
+        "source": "productCode",
+        "required": null,
+        "location": null,
+        "name": null
+      },
+      {
+        "source": "operatorId",
+        "required": null,
+        "location": null,
+        "name": null
+      },
+      {
+        "source": "customerId",
+        "required": null,
+        "location": null,
+        "name": null
+      },
+      {
+        "source": "referenceId",
+        "required": null,
+        "location": null,
+        "name": null
+      }
+    ],
+    "signature": {
+      "required": null,
+      "algorithm": null,
+      "inputTemplate": null,
+      "location": null,
+      "name": null,
+      "encoding": null
+    }
+  },
+  "response": {
+    "statusField": null,
+    "statusValues": {
+      "success": [],
+      "pending": [],
+      "failure": []
+    },
+    "providerReferenceField": null,
+    "messageField": null
+  }
+}

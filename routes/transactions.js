@@ -1,12 +1,14 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
-const axios = require('axios');
 const midtransClient = require('midtrans-client');
 const router = express.Router();
 const Transaction = require('../models/Transaction');
 const { requireAuth, requireAdmin, optionalAuth } = require('../middleware/auth');
-const { resolveGamePrice } = require('../catalog');
+const {
+    getApiGamesOrderConfig,
+    resolveApiGamesOrderProduct
+} = require('../utils/apigames-orders');
 
 const getSnapClient = () => {
     return new midtransClient.Snap({
@@ -15,75 +17,38 @@ const getSnapClient = () => {
     });
 };
 
-// Fungsi Otomatis Kirim Pesanan ke Supplier H2H (Digiflazz)
-const processSupplierOrder = async (tx) => {
-    try {
-        if (
-            !tx ||
-            tx.game === 'Isi Saldo Galaksi' ||
-            tx.status === 'Success' ||
-            tx.status === 'Canceled' ||
-            tx.supplierProcessed
-        ) {
-            return;
-        }
+const deferPaidApiGamesOrder = async (tx) => {
+    const config = getApiGamesOrderConfig();
+    const nextState = config.readyForAdapter
+        ? 'AWAITING_API_ORDER_ADAPTER'
+        : 'AWAITING_ENDPOINT_CONFIRMATION';
 
-        const usernameDigi = process.env.DIGIFLAZZ_USERNAME;
-        const keyDigi = process.env.DIGIFLAZZ_KEY;
+    const updated = await Transaction.findOneAndUpdate(
+        {
+            _id: tx._id,
+            status: 'Pending',
+            $or: [
+                { apigamesOrderState: 'WAITING_FOR_PAYMENT' },
+                { apigamesOrderState: { $exists: false } }
+            ]
+        },
+        {
+            $set: {
+                apigamesOrderState: nextState,
+                apigamesPaidAt: new Date(),
+                apigamesRefId: tx.orderId
+            }
+        },
+        { new: true }
+    );
 
-        if (!usernameDigi || !keyDigi) {
-            console.warn('[SUPPLIER] DIGIFLAZZ_USERNAME atau DIGIFLAZZ_KEY belum diatur di environment.');
-            return;
-        }
-
-        const refId = tx.orderId;
-        const sign = crypto.createHash('md5').update(usernameDigi + keyDigi + refId).digest('hex');
-
-        // Pemetaan SKU Produk Game ke Digiflazz (sesuaikan dengan daftar SKU di akun Digiflazz kamu)
-        let skuCode = 'ml5';
-        const lowerGame = (tx.game || '').toLowerCase();
-        const nominalStr = String(tx.nominal || '');
-
-        if (lowerGame.includes('mobile legends')) {
-            if (nominalStr.includes('50')) skuCode = 'ml50';
-            else if (nominalStr.includes('10')) skuCode = 'ml10';
-            else skuCode = 'ml5';
-        } else if (lowerGame.includes('free fire')) {
-            skuCode = 'ff70';
-        }
-
-        const customerNo = String(tx.userIdGame || '').replace(/[^0-9]/g, '');
-
-        const response = await axios.post(
-            'https://api.digiflazz.com/v1/transaction',
-            {
-                username: usernameDigi,
-                buyer_sku_code: skuCode,
-                customer_no: customerNo,
-                ref_id: refId,
-                sign
-            },
-            { timeout: 15000 }
-        );
-
-        const result = response.data && response.data.data ? response.data.data : null;
-        if (result && (result.status === 'Sukses' || result.status === 'Success' || result.status === 0)) {
-            tx.status = 'Success';
-            tx.supplierProcessed = true;
-            await tx.save();
-            console.log(`[DIGIFLAZZ OTOMATIS] Pesanan ${refId} BERHASIL diproses.`);
-        } else {
-            console.log(`[DIGIFLAZZ OTOMATIS] Status supplier untuk ${refId}:`, result?.status || result?.message || 'Pending');
-        }
-    } catch (err) {
-        console.error('[DIGIFLAZZ ERROR] Gagal mengirim pesanan ke Digiflazz:', err.response?.data || err.message);
-    }
+    return updated || Transaction.findById(tx._id);
 };
 
 // POST: Buat Transaksi Baru + Minta Snap Token ke Midtrans
 router.post('/', requireAuth, async (req, res) => {
     try {
-        const { game, userIdGame, zoneId, nominal, metodePembayaran, status, whatsapp, promoCode } = req.body;
+        const { game, userIdGame, zoneId, nominal, metodePembayaran, whatsapp, promoCode } = req.body;
 
         if (!game || !userIdGame || !nominal || !metodePembayaran) {
             return res.status(400).json({
@@ -93,6 +58,7 @@ router.post('/', requireAuth, async (req, res) => {
         }
 
         let numericHarga;
+        let apiGamesProduct = null;
         if (game === 'Isi Saldo Galaksi') {
             numericHarga = Math.round(Number(req.body.harga));
             if (isNaN(numericHarga) || numericHarga < 10000) {
@@ -102,14 +68,29 @@ router.post('/', requireAuth, async (req, res) => {
                 });
             }
         } else {
-            const resolvedPrice = resolveGamePrice(game, nominal, promoCode);
-            if (!resolvedPrice) {
-                return res.status(400).json({
+            try {
+                apiGamesProduct = resolveApiGamesOrderProduct({
+                    gameName: game,
+                    nominalName: nominal,
+                    promoCode
+                });
+            } catch (error) {
+                console.error('[APIGAMES ORDER MAPPING] Gagal memuat katalog atau mapping lokal:', error.message);
+                return res.status(503).json({
                     success: false,
-                    message: 'Produk atau nominal tidak ditemukan dalam katalog resmi'
+                    message: 'Katalog atau mapping produk ApiGames belum tersedia di server.'
                 });
             }
-            numericHarga = resolvedPrice.finalPrice;
+
+            if (!apiGamesProduct.success) {
+                const statusCode = apiGamesProduct.code === 'INVALID_CATALOG_ITEM' ? 400 : 409;
+                return res.status(statusCode).json({
+                    success: false,
+                    code: apiGamesProduct.code,
+                    message: apiGamesProduct.message
+                });
+            }
+            numericHarga = apiGamesProduct.retailPrice;
         }
 
         if (numericHarga <= 0) {
@@ -125,23 +106,9 @@ router.post('/', requireAuth, async (req, res) => {
         const orderId = `FLYNNN-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
 
         if (cleanMethod === 'WALLET') {
-            const newTransaction = new Transaction({
-                orderId,
-                game: cleanGame,
-                userIdGame: String(userIdGame).trim(),
-                zoneId: zoneId ? String(zoneId).trim() : '-',
-                nominal: String(nominal).trim(),
-                harga: numericHarga,
-                metodePembayaran: cleanMethod,
-                status: status === 'Success' ? 'Success' : 'Pending',
-                userId: cleanUserId
-            });
-
-            const savedData = await newTransaction.save();
-            return res.status(201).json({
-                success: true,
-                message: 'Transaksi Saldo Galaksi Berhasil!',
-                data: savedData
+            return res.status(503).json({
+                success: false,
+                message: 'Pembayaran Saldo Galaksi untuk order game dinonaktifkan sampai pemrosesan ApiGames dikonfirmasi.'
             });
         }
 
@@ -187,7 +154,14 @@ router.post('/', requireAuth, async (req, res) => {
             metodePembayaran: cleanMethod,
             snapToken: midtransTx.token,
             status: 'Pending',
-            userId: cleanUserId
+            userId: cleanUserId,
+            apigamesProductCode: apiGamesProduct?.productCode,
+            apigamesOperatorId: apiGamesProduct?.operatorId,
+            apigamesProductName: apiGamesProduct?.productName,
+            apigamesCostUnit: apiGamesProduct?.costUnit,
+            apigamesCostRupiah: apiGamesProduct?.costRupiah,
+            apigamesRefId: orderId,
+            apigamesOrderState: apiGamesProduct ? 'WAITING_FOR_PAYMENT' : 'NOT_REQUIRED'
         });
 
         const savedData = await newTransaction.save();
@@ -241,13 +215,15 @@ router.post('/verify/:orderId', optionalAuth, async (req, res, next) => {
         if ((txStatus === 'capture' && fraudStatus === 'accept') || txStatus === 'settlement') {
             if (tx.game === 'Isi Saldo Galaksi') {
                 tx.status = 'Success';
+                tx.apigamesOrderState = 'NOT_REQUIRED';
                 await tx.save();
             } else {
-                await processSupplierOrder(tx);
+                await deferPaidApiGamesOrder(tx);
             }
         } else if (['cancel', 'deny', 'expire'].includes(txStatus)) {
             if (tx.status !== 'Success') {
                 tx.status = 'Canceled';
+                tx.apigamesOrderState = 'CANCELED';
                 await tx.save();
             }
         }
@@ -304,13 +280,15 @@ router.post('/midtrans-notification', async (req, res) => {
                 if ((transaction_status === 'capture' && fraud_status === 'accept') || transaction_status === 'settlement') {
                     if (tx.game === 'Isi Saldo Galaksi') {
                         tx.status = 'Success';
+                        tx.apigamesOrderState = 'NOT_REQUIRED';
                         await tx.save();
                     } else {
-                        await processSupplierOrder(tx);
+                        await deferPaidApiGamesOrder(tx);
                     }
                 } else if (['cancel', 'deny', 'expire'].includes(transaction_status)) {
                     if (tx.status !== 'Success') {
                         tx.status = 'Canceled';
+                        tx.apigamesOrderState = 'CANCELED';
                         await tx.save();
                     }
                 }
