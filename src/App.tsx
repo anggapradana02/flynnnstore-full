@@ -116,12 +116,24 @@ const App: React.FC = () => {
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [allDbTransactions, setAllDbTransactions] = useState<any[]>([]);
 
+  const getSessionToken = () => {
+    const activeSession = JSON.parse(localStorage.getItem('flynnn_active_session') || '{}');
+    const sessionToken = [user?.token, activeSession?.token]
+      .find((token) => typeof token === 'string' && token.trim());
+    return sessionToken?.trim() || '';
+  };
+
   const getAuthHeaders = (json = false) => {
-    const sessionToken = user?.token || JSON.parse(localStorage.getItem('flynnn_active_session') || '{}')?.token;
+    const sessionToken = getSessionToken();
     return {
       ...(json ? { 'Content-Type': 'application/json' } : {}),
       ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {})
     };
+  };
+
+  const hasSandboxMidtransClientKey = () => {
+    const snapScript = document.querySelector<HTMLScriptElement>('script[src*="snap.js"]');
+    return Boolean(snapScript?.dataset.clientKey?.startsWith('SB-Mid-client-'));
   };
 
   useEffect(() => {
@@ -378,6 +390,18 @@ const App: React.FC = () => {
 
   const handleInitiatePayment = async (method: string) => {
     if (isProcessingPayment) return;
+
+    if (!getSessionToken()) {
+      setAuthMode('LOGIN');
+      setShowAuthModal(true);
+      alert('Sesi login belum memiliki token autentikasi. Silakan login ulang sebelum membuat transaksi.');
+      return;
+    }
+
+    if (method !== 'WALLET' && !hasSandboxMidtransClientKey()) {
+      alert('Key Midtrans Sandbox belum dikonfigurasi pada frontend.');
+      return;
+    }
 
     if (pending.type === 'GAME') {
       if (!userIdGame) {

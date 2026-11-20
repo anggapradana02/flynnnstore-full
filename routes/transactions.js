@@ -11,9 +11,19 @@ const {
 } = require('../utils/apigames-orders');
 
 const getSnapClient = () => {
+    const mode = String(process.env.MIDTRANS_IS_PRODUCTION || '').trim().toLowerCase();
+    const serverKey = String(process.env.MIDTRANS_SERVER_KEY || '').trim();
+
+    if (mode !== 'false') {
+        throw new Error('Midtrans dikunci ke Sandbox; MIDTRANS_IS_PRODUCTION harus bernilai false.');
+    }
+    if (!serverKey.startsWith('SB-Mid-server-')) {
+        throw new Error('MIDTRANS_SERVER_KEY harus menggunakan key Sandbox.');
+    }
+
     return new midtransClient.Snap({
-        isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
-        serverKey: process.env.MIDTRANS_SERVER_KEY
+        isProduction: false,
+        serverKey
     });
 };
 
