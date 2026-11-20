@@ -5,6 +5,8 @@ const axios = require('axios');
 const midtransClient = require('midtrans-client');
 const router = express.Router();
 const Transaction = require('../models/Transaction');
+const { requireAuth, requireAdmin, optionalAuth } = require('../middleware/auth');
+const { resolveGamePrice } = require('../catalog');
 
 const getSnapClient = () => {
     return new midtransClient.Snap({
@@ -16,7 +18,13 @@ const getSnapClient = () => {
 // Fungsi Otomatis Kirim Pesanan ke Supplier H2H (Digiflazz)
 const processSupplierOrder = async (tx) => {
     try {
-        if (!tx || tx.status === 'Success' || tx.status === 'Canceled' || tx.supplierProcessed) {
+        if (
+            !tx ||
+            tx.game === 'Isi Saldo Galaksi' ||
+            tx.status === 'Success' ||
+            tx.status === 'Canceled' ||
+            tx.supplierProcessed
+        ) {
             return;
         }
 
@@ -73,19 +81,38 @@ const processSupplierOrder = async (tx) => {
 };
 
 // POST: Buat Transaksi Baru + Minta Snap Token ke Midtrans
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
     try {
-        const { game, userIdGame, zoneId, nominal, harga, metodePembayaran, status, userId, whatsapp } = req.body;
+        const { game, userIdGame, zoneId, nominal, metodePembayaran, status, whatsapp, promoCode } = req.body;
 
-        if (!game || !userIdGame || !nominal || harga === undefined || !metodePembayaran) {
+        if (!game || !userIdGame || !nominal || !metodePembayaran) {
             return res.status(400).json({
                 success: false,
                 message: 'Validasi Gagal: Semua field transaksi wajib diisi secara lengkap!'
             });
         }
 
-        const numericHarga = Math.round(Number(harga));
-        if (isNaN(numericHarga) || numericHarga <= 0) {
+        let numericHarga;
+        if (game === 'Isi Saldo Galaksi') {
+            numericHarga = Math.round(Number(req.body.harga));
+            if (isNaN(numericHarga) || numericHarga < 10000) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Validasi Gagal: Nominal isi saldo minimal Rp 10.000!'
+                });
+            }
+        } else {
+            const resolvedPrice = resolveGamePrice(game, nominal, promoCode);
+            if (!resolvedPrice) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Produk atau nominal tidak ditemukan dalam katalog resmi'
+                });
+            }
+            numericHarga = resolvedPrice.finalPrice;
+        }
+
+        if (numericHarga <= 0) {
             return res.status(400).json({
                 success: false,
                 message: 'Validasi Gagal: Nominal harga harus lebih dari Rp 0!'
@@ -93,7 +120,7 @@ router.post('/', async (req, res) => {
         }
 
         const cleanGame = String(game).trim();
-        const cleanUserId = userId ? String(userId).trim() : null;
+        const cleanUserId = req.user.username;
         const cleanMethod = String(metodePembayaran).trim();
         const orderId = `FLYNNN-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
 
@@ -182,7 +209,7 @@ router.post('/', async (req, res) => {
 });
 
 // POST: Verifikasi Status Transaksi Langsung ke API Midtrans
-router.post('/verify/:orderId', async (req, res, next) => {
+router.post('/verify/:orderId', optionalAuth, async (req, res, next) => {
     try {
         const orderId = String(req.params.orderId).trim();
         const tx = await Transaction.findOne({ orderId });
@@ -190,14 +217,34 @@ router.post('/verify/:orderId', async (req, res, next) => {
         if (!tx) {
             return res.status(404).json({ success: false, message: 'Order tidak ditemukan' });
         }
+        if (req.user && req.user.role !== 'ADMIN' && tx.userId !== req.user.username) {
+            return res.status(403).json({ success: false, message: 'Akses transaksi ditolak' });
+        }
 
         const snap = getSnapClient();
         const statusResponse = await snap.transaction.status(orderId);
         const txStatus = statusResponse.transaction_status;
         const fraudStatus = statusResponse.fraud_status;
+        const midtransGrossAmount = Math.round(Number(statusResponse.gross_amount));
+        const databaseGrossAmount = Math.round(Number(tx.harga));
+
+        if (
+            !Number.isFinite(midtransGrossAmount) ||
+            midtransGrossAmount !== databaseGrossAmount
+        ) {
+            return res.status(409).json({
+                success: false,
+                message: 'Gross amount Midtrans tidak cocok dengan data transaksi'
+            });
+        }
 
         if ((txStatus === 'capture' && fraudStatus === 'accept') || txStatus === 'settlement') {
-            await processSupplierOrder(tx);
+            if (tx.game === 'Isi Saldo Galaksi') {
+                tx.status = 'Success';
+                await tx.save();
+            } else {
+                await processSupplierOrder(tx);
+            }
         } else if (['cancel', 'deny', 'expire'].includes(txStatus)) {
             if (tx.status !== 'Success') {
                 tx.status = 'Canceled';
@@ -247,8 +294,20 @@ router.post('/midtrans-notification', async (req, res) => {
                     return;
                 }
 
+                const webhookGrossAmount = Math.round(Number(gross_amount));
+                const databaseGrossAmount = Math.round(Number(tx.harga));
+                if (!Number.isFinite(webhookGrossAmount) || webhookGrossAmount !== databaseGrossAmount) {
+                    console.error(`[WEBHOOK] Gross amount tidak cocok untuk ${order_id}`);
+                    return;
+                }
+
                 if ((transaction_status === 'capture' && fraud_status === 'accept') || transaction_status === 'settlement') {
-                    await processSupplierOrder(tx);
+                    if (tx.game === 'Isi Saldo Galaksi') {
+                        tx.status = 'Success';
+                        await tx.save();
+                    } else {
+                        await processSupplierOrder(tx);
+                    }
                 } else if (['cancel', 'deny', 'expire'].includes(transaction_status)) {
                     if (tx.status !== 'Success') {
                         tx.status = 'Canceled';
@@ -268,13 +327,12 @@ router.post('/midtrans-notification', async (req, res) => {
 });
 
 // GET: Ambil Riwayat Transaksi (Difilter per user atau semua untuk admin)
-router.get('/', async (req, res, next) => {
+router.get('/', requireAuth, async (req, res, next) => {
     try {
-        const { userId } = req.query;
         let query = {};
 
-        if (userId && userId !== 'ADMINISTRATOR') {
-            query = { userId: String(userId).trim() };
+        if (req.user.role !== 'ADMIN') {
+            query = { userId: req.user.username };
         }
 
         const history = await Transaction.find(query).sort({ createdAt: -1 });
@@ -285,7 +343,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // PUT: Update Status Transaksi (Admin Panel)
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requireAuth, requireAdmin, async (req, res, next) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ success: false, message: 'Format ID transaksi tidak valid' });
@@ -309,7 +367,7 @@ router.put('/:id', async (req, res, next) => {
 });
 
 // DELETE: Hapus Transaksi (Admin Panel)
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requireAuth, requireAdmin, async (req, res, next) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ success: false, message: 'Format ID transaksi tidak valid' });

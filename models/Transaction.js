@@ -10,7 +10,8 @@ const transactionSchema = new mongoose.Schema({
     metodePembayaran: { type: String },
     snapToken: { type: String },
     status: { type: String, enum: ['Pending', 'Success', 'Canceled'], default: 'Pending' },
-    userId: { type: String }
+    userId: { type: String },
+    supplierProcessed: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Transaction', transactionSchema);

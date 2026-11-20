@@ -1,7 +1,114 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+
+const createSession = (user) => jwt.sign(
+    {
+        username: user.username,
+        role: user.role || 'USER'
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+);
+
+router.post('/guest', async (req, res, next) => {
+    try {
+        const username = `GUEST_${Math.floor(1000 + Math.random() * 9000)}`;
+        const guest = formatUserResponse({
+            username,
+            role: 'GUEST',
+            balance: 0,
+            level: 1
+        });
+
+        res.status(201).json({
+            success: true,
+            user: guest,
+            token: createSession(guest)
+        });
+    } catch (err) {
+        next(err);
+    }
+});
+
+router.post('/admin-login', async (req, res, next) => {
+    try {
+        const { username, password } = req.body || {};
+
+        if (
+            !process.env.ADMIN_USERNAME ||
+            !process.env.ADMIN_PASSWORD ||
+            username !== process.env.ADMIN_USERNAME ||
+            password !== process.env.ADMIN_PASSWORD
+        ) {
+            return res.status(401).json({
+                success: false,
+                message: 'Akses Ditolak'
+            });
+
+            router.post('/google', async (req, res, next) => {
+                try {
+                    const { username, email, avatar } = req.body || {};
+                    const cleanUsername = String(username || '').trim().toUpperCase();
+                    const cleanEmail = String(email || '').trim();
+
+                    if (!cleanUsername || !cleanEmail) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Data akun Google tidak lengkap'
+                        });
+                    }
+
+                    let googleUser = await User.findOne({
+                        $or: [{ email: cleanEmail }, { username: cleanUsername }]
+                    });
+
+                    if (!googleUser) {
+                        googleUser = await User.create({
+                            username: cleanUsername,
+                            email: cleanEmail,
+                            password: `google:${require('crypto').randomBytes(32).toString('hex')}`,
+                            role: 'USER',
+                            level: 1,
+                            balance: 0,
+                            saldo: 0
+                        });
+                    }
+
+                    const formatted = formatUserResponse(googleUser);
+                    formatted.avatar = String(avatar || '').trim() || formatted.avatar;
+
+                    res.json({
+                        success: true,
+                        user: formatted,
+                        token: createSession(formatted)
+                    });
+                } catch (err) {
+                    next(err);
+                }
+            });
+        }
+
+        const admin = {
+            username: 'ADMINISTRATOR',
+            role: 'ADMIN',
+            balance: 9999999,
+            level: 99,
+            status: 'System Administrator',
+            avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=AdminFlynnn'
+        };
+
+        res.json({
+            success: true,
+            user: admin,
+            token: createSession(admin)
+        });
+    } catch (err) {
+        next(err);
+    }
+});
 
 const formatUserResponse = (u) => ({
     username: u.username,
@@ -45,7 +152,8 @@ router.post('/login-check', async (req, res, next) => {
 
         res.json({
             success: true,
-            user: formatUserResponse(foundUser)
+            user: formatUserResponse(foundUser),
+            token: createSession(formatUserResponse(foundUser))
         });
     } catch (err) {
         next(err);
@@ -90,7 +198,8 @@ router.post('/register', async (req, res, next) => {
         res.status(201).json({
             success: true,
             message: 'Akun berhasil didaftarkan ke database!',
-            user: formatUserResponse(created)
+            user: formatUserResponse(created),
+            token: createSession(formatUserResponse(created))
         });
     } catch (err) {
         next(err);

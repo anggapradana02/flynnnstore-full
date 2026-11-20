@@ -116,6 +116,14 @@ const App: React.FC = () => {
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [allDbTransactions, setAllDbTransactions] = useState<any[]>([]);
 
+  const getAuthHeaders = (json = false) => {
+    const sessionToken = user?.token || JSON.parse(localStorage.getItem('flynnn_active_session') || '{}')?.token;
+    return {
+      ...(json ? { 'Content-Type': 'application/json' } : {}),
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {})
+    };
+  };
+
   useEffect(() => {
     const initApp = async () => {
       await loadData();
@@ -168,7 +176,8 @@ const App: React.FC = () => {
 
     try {
       const res = await fetch(`${API_BASE}/api/transactions/verify/${returnedOrderId}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: getAuthHeaders()
       });
       const verifyData = await res.json();
 
@@ -243,7 +252,7 @@ const App: React.FC = () => {
         ? `${API_BASE}/api/transactions` 
         : `${API_BASE}/api/transactions?userId=${encodeURIComponent(uname || '')}`;
 
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         setAllDbTransactions(data);
@@ -331,11 +340,12 @@ const App: React.FC = () => {
       onSuccess: async () => {
         try {
           const verifyRes = await fetch(`${API_BASE}/api/transactions/verify/${orderId}`, {
-            method: 'POST'
+            method: 'POST',
+            headers: getAuthHeaders()
           });
           const verifyData = await verifyRes.json();
           
-          if (verifyData.success && isBalanceTopup) {
+          if (verifyRes.ok && verifyData.success && verifyData.data?.status === 'Success' && isBalanceTopup) {
             await creditBalanceSafely(orderId, amount);
           }
         } catch (err) {
@@ -355,7 +365,8 @@ const App: React.FC = () => {
       onClose: async () => {
         try {
           await fetch(`${API_BASE}/api/transactions/verify/${orderId}`, {
-            method: 'POST'
+            method: 'POST',
+            headers: getAuthHeaders()
           });
         } catch (e) {}
 
@@ -396,7 +407,7 @@ const App: React.FC = () => {
       try {
         await fetch(`${API_BASE}/api/transactions`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(true),
           body: JSON.stringify({
             game: pending.gameName,
             userIdGame: `${userIdGame} (${verifiedNickname || 'Unverified'})`,
@@ -405,7 +416,8 @@ const App: React.FC = () => {
             harga: finalPrice,
             metodePembayaran: method,
             status: 'Success',
-            userId: user.username
+            userId: user.username,
+            promoCode
           })
         });
 
@@ -433,7 +445,7 @@ const App: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE}/api/transactions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(true),
         body: JSON.stringify({
           game: pending.gameName,
           userIdGame: pending.type === 'BALANCE' ? `${user.username} (Topup Saldo)` : `${userIdGame} (${verifiedNickname || 'Unverified'})`,
@@ -443,7 +455,8 @@ const App: React.FC = () => {
           metodePembayaran: method,
           status: 'Pending',
           userId: user.username,
-          whatsapp
+          whatsapp,
+          promoCode
         })
       });
 
@@ -482,7 +495,10 @@ const App: React.FC = () => {
 
   const handleDeleteAdminTx = async (id: string) => {
     if (!confirm('Yakin ingin menghapus data transaksi ini dari MongoDB Atlas?')) return;
-    await fetch(`${API_BASE}/api/transactions/${id}`, { method: 'DELETE' });
+    await fetch(`${API_BASE}/api/transactions/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
     fetchDatabaseTransactions(user.username, user.role);
   };
 
@@ -491,7 +507,7 @@ const App: React.FC = () => {
     try {
       await fetch(`${API_BASE}/api/transactions/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(true),
         body: JSON.stringify({ status: nextStatus })
       });
       fetchDatabaseTransactions(user.username, user.role);
@@ -577,7 +593,7 @@ const App: React.FC = () => {
           return;
         }
 
-        const newUser = regData.user;
+        const newUser = { ...regData.user, token: regData.token };
         await db.updateUserProfile(newUser);
         setUser(newUser);
         setBalance(newUser.balance || 0);
@@ -605,7 +621,7 @@ const App: React.FC = () => {
           return;
         }
 
-        const existingUser = loginData.user;
+        const existingUser = { ...loginData.user, token: loginData.token };
         await db.updateUserProfile(existingUser);
         setUser(existingUser);
         setBalance(existingUser.balance || 0);
@@ -632,15 +648,23 @@ const App: React.FC = () => {
       const result = await signInWithPopup(auth, googleProvider);
       const googleUser = result.user;
 
-      const userData = {
+      const requestedUser = {
         username: googleUser.displayName ? googleUser.displayName.toUpperCase() : 'GOOGLE USER',
         email: googleUser.email,
-        avatar: googleUser.photoURL || 'https://api.dicebear.com/7.x/bottts/svg?seed=Google',
-        status: 'Google Verified User',
-        role: 'USER',
-        level: 1,
-        balance: 0
+        avatar: googleUser.photoURL || 'https://api.dicebear.com/7.x/bottts/svg?seed=Google'
       };
+
+      const backendRes = await fetch(`${API_BASE}/api/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestedUser)
+      });
+      const backendData = await backendRes.json();
+      if (!backendRes.ok || !backendData.success) {
+        throw new Error(backendData.message || 'Gagal membuat sesi Google');
+      }
+
+      const userData = { ...backendData.user, token: backendData.token };
 
       const registeredUsers = JSON.parse(localStorage.getItem('flynnn_registered_users') || '{}');
       if (!registeredUsers[userData.username]) {
@@ -667,37 +691,43 @@ const App: React.FC = () => {
   };
 
   const handleSelectGuest = async () => {
-    const guestProfile = { 
-      username: `GUEST_${Math.floor(1000 + Math.random() * 9000)}`, 
-      avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Guest', 
-      status: 'Guest User', 
-      level: 1, 
-      balance: 0, 
-      role: 'GUEST' 
-    };
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/guest`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Gagal membuat sesi guest');
+      }
 
-    await db.updateUserProfile(guestProfile);
-    setUser(guestProfile);
-    setBalance(0);
-    saveActiveSession(guestProfile);
-    setScreen('DASHBOARD');
-    await fetchDatabaseTransactions(guestProfile.username, 'GUEST');
+      const guestProfile = { ...data.user, token: data.token };
+      await db.updateUserProfile(guestProfile);
+      setUser(guestProfile);
+      setBalance(0);
+      saveActiveSession(guestProfile);
+      setScreen('DASHBOARD');
+      await fetchDatabaseTransactions(guestProfile.username, 'GUEST');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Gagal masuk sebagai guest');
+    }
   };
 
   const handleAdminAuthSubmit = async () => {
     const userClean = adminUsernameInput.trim();
     const passClean = adminPasswordInput.trim();
 
-    if ((userClean === 'admin' || userClean === 'ADMIN') && (passClean === 'admin123' || passClean === 'flynnn2026')) {
-      const p = { 
-        username: 'ADMINISTRATOR', 
-        avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=AdminFlynnn', 
-        status: 'System Administrator', 
-        role: 'ADMIN',
-        level: 99, 
-        balance: 9999999 
-      };
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/admin-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: userClean, password: passClean })
+      });
+      const data = await res.json();
 
+      if (!res.ok || !data.success) {
+        alert(data.message || 'Akses Ditolak!');
+        return;
+      }
+
+      const p = { ...data.user, token: data.token };
       await db.updateUserProfile(p);
       setUser(p);
       setBalance(p.balance);
@@ -709,8 +739,8 @@ const App: React.FC = () => {
       setScreen('ADMIN');
       await fetchDatabaseTransactions(p.username, 'ADMIN');
       alert('Akses Diterima! Selamat Datang, Administrator.');
-    } else {
-      alert('Akses Ditolak! Username atau Password Admin salah.');
+    } catch (error) {
+      alert('Gagal terhubung ke server administrasi');
     }
   };
 
@@ -1638,7 +1668,10 @@ const App: React.FC = () => {
                             <button
                               onClick={async () => {
                                 try {
-                                  const res = await fetch(`${API_BASE}/api/transactions/verify/${tx.orderId}`, { method: 'POST' });
+                                  const res = await fetch(`${API_BASE}/api/transactions/verify/${tx.orderId}`, {
+                                    method: 'POST',
+                                    headers: getAuthHeaders()
+                                  });
                                   const data = await res.json();
                                   if (data.success && data.data.status === 'Success') {
                                     if (tx.game === 'Isi Saldo Galaksi') {
