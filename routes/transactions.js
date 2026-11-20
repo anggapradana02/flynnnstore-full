@@ -16,59 +16,59 @@ const getSnapClient = () => {
 // Fungsi Otomatis Kirim Pesanan ke Supplier H2H (Digiflazz)
 const processSupplierOrder = async (tx) => {
     try {
-        if (tx.status === 'Success' || tx.supplierProcessed) return;
+        if (!tx || tx.status === 'Success' || tx.status === 'Canceled' || tx.supplierProcessed) {
+            return;
+        }
 
         const usernameDigi = process.env.DIGIFLAZZ_USERNAME;
         const keyDigi = process.env.DIGIFLAZZ_KEY;
-        
-        // Jika kredensial Digiflazz belum diatur di Render, lewati otomatisasi supplier agar tidak error
+
         if (!usernameDigi || !keyDigi) {
-            console.log('[SUPPLIER] Kredensial Digiflazz belum diset, transaksi ditandai sukses lokal.');
-            tx.status = 'Success';
-            tx.supplierProcessed = true;
-            await tx.save();
+            console.warn('[SUPPLIER] DIGIFLAZZ_USERNAME atau DIGIFLAZZ_KEY belum diatur di environment.');
             return;
         }
 
         const refId = tx.orderId;
         const sign = crypto.createHash('md5').update(usernameDigi + keyDigi + refId).digest('hex');
 
-        // Pemetaan SKU Produk Game ke Digiflazz (Sesuaikan dengan SKU di akun Digiflazz kamu)
-        let skuCode = 'ml5'; 
-        const lowerGame = tx.game.toLowerCase();
+        // Pemetaan SKU Produk Game ke Digiflazz (sesuaikan dengan daftar SKU di akun Digiflazz kamu)
+        let skuCode = 'ml5';
+        const lowerGame = (tx.game || '').toLowerCase();
+        const nominalStr = String(tx.nominal || '');
+
         if (lowerGame.includes('mobile legends')) {
-            if (tx.nominal.includes('10')) skuCode = 'ml10';
-            else if (tx.nominal.includes('50')) skuCode = 'ml50';
+            if (nominalStr.includes('50')) skuCode = 'ml50';
+            else if (nominalStr.includes('10')) skuCode = 'ml10';
             else skuCode = 'ml5';
         } else if (lowerGame.includes('free fire')) {
             skuCode = 'ff70';
         }
 
-        const response = await axios.post('https://api.digiflazz.com/v1/transaction', {
-            username: usernameDigi,
-            buyer_sku_code: skuCode,
-            customer_no: tx.userIdGame.replace(/[^0-9]/g, ''),
-            ref_id: refId,
-            sign: sign
-        });
+        const customerNo = String(tx.userIdGame || '').replace(/[^0-9]/g, '');
 
-        const result = response.data.data;
-        if (result && (result.status === 'Sukses' || result.status === 0)) {
+        const response = await axios.post(
+            'https://api.digiflazz.com/v1/transaction',
+            {
+                username: usernameDigi,
+                buyer_sku_code: skuCode,
+                customer_no: customerNo,
+                ref_id: refId,
+                sign
+            },
+            { timeout: 15000 }
+        );
+
+        const result = response.data && response.data.data ? response.data.data : null;
+        if (result && (result.status === 'Sukses' || result.status === 'Success' || result.status === 0)) {
             tx.status = 'Success';
             tx.supplierProcessed = true;
             await tx.save();
-            console.log(`[DIGIFLAZZ OTOMATIS] Pesanan ${refId} BERHASIL dikirim ke server game!`);
+            console.log(`[DIGIFLAZZ OTOMATIS] Pesanan ${refId} BERHASIL diproses.`);
         } else {
-            console.log(`[DIGIFLAZZ OTOMATIS] Respon Pending/Proses:`, result?.message);
-            tx.status = 'Success'; // Status lokal tetap sukses jika pembayaran lunas
-            tx.supplierProcessed = true;
-            await tx.save();
+            console.log(`[DIGIFLAZZ OTOMATIS] Status supplier untuk ${refId}:`, result?.status || result?.message || 'Pending');
         }
     } catch (err) {
-        console.error('Gagal mengirim pesanan otomatis ke Digiflazz:', err.message);
-        tx.status = 'Success';
-        tx.supplierProcessed = true;
-        await tx.save();
+        console.error('[DIGIFLAZZ ERROR] Gagal mengirim pesanan ke Digiflazz:', err.response?.data || err.message);
     }
 };
 
@@ -199,14 +199,17 @@ router.post('/verify/:orderId', async (req, res, next) => {
         if ((txStatus === 'capture' && fraudStatus === 'accept') || txStatus === 'settlement') {
             await processSupplierOrder(tx);
         } else if (['cancel', 'deny', 'expire'].includes(txStatus)) {
-            tx.status = 'Canceled';
-            await tx.save();
+            if (tx.status !== 'Success') {
+                tx.status = 'Canceled';
+                await tx.save();
+            }
         }
 
+        const latestTx = await Transaction.findOne({ orderId });
         res.json({
             success: true,
             midtransStatus: txStatus,
-            data: tx
+            data: latestTx || tx
         });
     } catch (err) {
         next(err);
@@ -216,8 +219,12 @@ router.post('/verify/:orderId', async (req, res, next) => {
 // POST: Webhook Resmi dari Server Midtrans
 router.post('/midtrans-notification', async (req, res) => {
     try {
-        const notification = req.body;
+        const notification = req.body || {};
         const { order_id, status_code, gross_amount, signature_key, transaction_status, fraud_status } = notification;
+
+        if (!order_id || !status_code || !gross_amount || !signature_key) {
+            return res.status(400).json({ success: false, message: 'Payload notifikasi tidak lengkap' });
+        }
 
         const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
         const expectedSignature = crypto
@@ -229,22 +236,34 @@ router.post('/midtrans-notification', async (req, res) => {
             return res.status(403).json({ success: false, message: 'Invalid Signature Key' });
         }
 
-        const tx = await Transaction.findOne({ orderId: String(order_id) });
-        if (!tx) {
-            return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' });
-        }
-
-        if ((transaction_status === 'capture' && fraud_status === 'accept') || transaction_status === 'settlement') {
-            await processSupplierOrder(tx);
-        } else if (['cancel', 'deny', 'expire'].includes(transaction_status)) {
-            tx.status = 'Canceled';
-            await tx.save();
-        }
-
+        // Balas HTTP 200 lebih dulu agar Midtrans tidak mengalami timeout saat Render bangun atau memproses supplier
         res.status(200).json({ success: true, message: 'Webhook diterima' });
+
+        setImmediate(async () => {
+            try {
+                const tx = await Transaction.findOne({ orderId: String(order_id) });
+                if (!tx) {
+                    console.log(`[WEBHOOK] Transaksi ${order_id} tidak ditemukan di database.`);
+                    return;
+                }
+
+                if ((transaction_status === 'capture' && fraud_status === 'accept') || transaction_status === 'settlement') {
+                    await processSupplierOrder(tx);
+                } else if (['cancel', 'deny', 'expire'].includes(transaction_status)) {
+                    if (tx.status !== 'Success') {
+                        tx.status = 'Canceled';
+                        await tx.save();
+                    }
+                }
+            } catch (bgErr) {
+                console.error('[WEBHOOK BACKGROUND ERROR]:', bgErr.message);
+            }
+        });
     } catch (err) {
         console.error('Webhook Error:', err.message);
-        res.status(500).json({ success: false, message: err.message });
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, message: err.message });
+        }
     }
 });
 
@@ -253,7 +272,7 @@ router.get('/', async (req, res, next) => {
     try {
         const { userId } = req.query;
         let query = {};
-        
+
         if (userId && userId !== 'ADMINISTRATOR') {
             query = { userId: String(userId).trim() };
         }

@@ -46,9 +46,11 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJSDoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// --- ROUTES API TRANSAKSI ---
+// --- ROUTES API ---
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/auth', require('./routes/auth'));
+// Aktifkan baris di bawah jika file ./routes/games.js sudah ada:
+// app.use('/api/games', require('./routes/games'));
 
 // --- MIDDLEWARE VALIDASI & ERROR HANDLING (Materi Minggu 3 & 8) ---
 app.use((req, res, next) => {
